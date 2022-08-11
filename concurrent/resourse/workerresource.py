@@ -19,6 +19,8 @@ class WorkerResource:
     gcollect: bool = False
     start_on_init: bool = False
     verbose: bool = False
+    msg_id_counter: int = 0
+    data_queue: collections.deque = dataclasses.field(default_factory=collections.deque)
 
     def __post_init__(self):
         ctx = multiprocessing.get_context(self.method)
@@ -51,49 +53,74 @@ class WorkerResource:
         if self.verbose: print(f'{self}.__del__ was called!')
         self.terminate(check_alive=False)
 
-    ############### Main interface methods ###############
-    def poll(self) -> bool: 
-        '''Check if worker sent anything.
-        '''
-        return self.pipe.poll()
+    ############### Message Queue Functionality ###############    
+    @property
+    def queue_size(self):
+        '''Get size of the message queue.'''
+        return len(self.data_queue)
 
+    ############### FAULTY ###############
     def execute(self, data: Any):
         '''Send data to worker and blocking return result upon reception.
         '''
         self.send_data(data)
         return self.recv_data()
+    
+    def get_status(self) -> WorkerStatus:
+        '''Blocking request status update from worker.
+        TODO: CAN'T BE USED IF ALL DATA HASN'T BEEN RETRIEVED
+        '''
+        self.send_payload(StatusRequestMessage(self.get_next_id()))
+        return self.recv().status
+    
+    ############### Asychronous Low-Level Interface Methods ###############
+    def recv_next_data(self) -> BaseMessage:
+        '''Will empty the incoming pipe and process non-data messages first.'''
+        while True:
+            
+            # if no more messages to receive and the queue has some data in it
+            if not self.poll_message() and len(self.data_queue) > 0:
+                return self.data_queue.pop()
+            
+            # potentially blocking call    
+            message = self.recv_message()
 
+            # process received data payload
+            if message.mtype == MessageType.DATA:
+                #self.execute_and_send(message)
+                self.data_queue.appendleft(message)
+    
+    ############### Asychronous Low-Level Interface Methods ###############
+    def poll_message(self) -> bool:
+        '''Check if worker sent anything.
+        '''
+        return self.pipe.poll()
+    
     def recv_data(self) -> Any:
         '''Receive raw data from user function.'''
         return self.recv().data
     
     def send_data(self, data: Any, **kwargs) -> None:
         '''Send any data to worker process to be handled by user function.'''
-        return self.send_payload(DataPayloadMessage(data, **kwargs))
+        return self.send_payload(DataPayloadMessage(self.get_next_id(), data, **kwargs))
 
     #def update_userfunc(self, func: Callable, *args, **kwargs):
     #    '''Send a new UserFunc to worker process.
     #    '''
     #    return self.send_payload(UserFunc(func, *args, **kwargs))
 
-    def get_status(self) -> WorkerStatus:
-        '''Blocking request status update from worker.
-        '''
-        self.send_payload(StatusRequestMessage())
-        return self.recv()
-
     ############### Pipe interface ###############
 
-    def send_payload(self, payload: BaseMessage) -> None:
+    def send_message(self, message: BaseMessage) -> None:
         '''Send a Message (DataPayloadMessage or otherwise) to worker process.
         '''
         if not self.proc.is_alive():
             raise WorkerIsDeadError('.send_payload()', self.proc.pid)
         
-        if self.verbose: print(f'{self} sending: {payload}')
+        if self.verbose: print(f'{self} sending: {message}')
         
         try:
-            return self.pipe.send(payload)
+            return self.pipe.send(message)
         
         except BrokenPipeError:
             raise WorkerDiedError(self.proc.pid)
@@ -101,18 +128,6 @@ class WorkerResource:
     def recv(self) -> DataPayloadMessage:
         '''Return received DataPayload or raise exception.
         '''
-        try:
-            payload = self.pipe.recv()
-            if self.verbose: print(f'{self} received: {payload}')
-        
-        except (BrokenPipeError, EOFError, ConnectionResetError):
-            if self.verbose: print('caught one of (BrokenPipeError, EOFError, ConnectionResetError)')
-            raise WorkerDiedError(self.proc.pid)
-        
-        try:
-            getattr(payload, 'mtype')
-        except AttributeError:
-            raise ResourceReceivedUnidentifiedMessage(f'Resource for worker {self.status.pid} received unidentified message: {payload}.')
 
         
         # handle incoming data
@@ -127,6 +142,24 @@ class WorkerResource:
         
         else:
             raise ResourceReceivedUnidentifiedMessage(f'WorkerResource {self.pid} received unidentified message from process: {payload}')
+    
+    def recv_message(self) -> BaseMessage:
+        '''Receive message from pipe.'''
+        try:
+            message = self.pipe.recv()
+            if self.verbose: print(f'{self} received: {message}')
+        
+        except (BrokenPipeError, EOFError, ConnectionResetError):
+            if self.verbose: print('caught one of (BrokenPipeError, EOFError, ConnectionResetError)')
+            raise WorkerDiedError(self.proc.pid)
+        
+        try:
+            getattr(message, 'mtype')
+        except AttributeError:
+            raise ResourceReceivedUnidentifiedMessage(f'Resource for worker {self.status.pid} received unidentified message: {message}.')
+
+    def check_message(self):
+        
     
     ############### Process interface ###############
     @property
@@ -169,6 +202,11 @@ class WorkerResource:
         except AttributeError as e:
             print('This WorkerResource has no process (proc attribute).')
             pass
+        
+    ############### Process interface ###############
+    def get_next_id(self):
+        self.msg_id_counter += 1
+        return self.msg_id_counter - 1
 
 #class WorkerPool(list):
 #
