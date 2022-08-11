@@ -37,7 +37,7 @@ class WorkerStatus:
     def efficiency(self) -> float:
         '''Work time divided by work+wait time.'''
         working_sec = self.working_time.total_seconds()
-        return working_sec / (working_sec + self.waiting_time)
+        return working_sec / (working_sec + self.waiting_time.total_seconds())
 
     def total_efficiency(self) -> float:
         '''Work time divided by uptime.'''
