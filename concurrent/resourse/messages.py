@@ -15,11 +15,22 @@ from .workerstatus import WorkerStatus
 class MessageType(enum.Enum):
     DATA = enum.auto()
     CLOSE = enum.auto()
+    STATUS_REQUEST = enum.auto()
     USERFUNC_ERROR = enum.auto()
     WORKER_ERROR = enum.auto()
-    STATUS_REQUEST = enum.auto()
     WORKER_STATUS = enum.auto()
-
+    
+valid_resource_recv_message_types = set(
+    MessageType.DATA,
+    MessageType.STATUS_REQUEST,
+    MessageType.CLOSE,
+)
+valid_process_recv_message_types = set(
+    MessageType.DATA,
+    MessageType.WORKER_STATUS,
+    MessageType.USERFUNC_ERROR,
+    MessageType.WORKER_ERROR,
+)
 
 class BaseMessage:
     #mtype: MessageType
@@ -29,14 +40,18 @@ class BaseMessage:
 class DataPayloadMessage(BaseMessage):
     '''For passing data to/from Workers.'''
     #__slots__ = ['data', 'ind', 'pid', 'mtype']
+    request_id: int
     data: Any = dataclasses.field(compare=False)
     ind: int = 0
     pid: int = None
+    priority: int = 1
     mtype: MessageType = MessageType.DATA
     
 
 class SigCloseMessage(BaseMessage):
     '''WorkerResource tells process to end.'''
+    request_id: int
+    priority: int = 1
     mtype: MessageType = MessageType.CLOSE
 
 
@@ -46,7 +61,9 @@ class WorkerErrorMessage(BaseMessage):
     '''Sent from Worker to WorkerResource when any worker exception is passed 
     (not userfunc).
     '''
+    request_id: int
     exception: BaseException
+    priority: int = 1
     mtype: MessageType = MessageType.WORKER_ERROR
 
 @dataclasses.dataclass
@@ -54,7 +71,9 @@ class UserFuncErrorMessage(BaseMessage):
     '''Passes exception from user function to main thread (and lets it know 
         there was an error with the user function).
     '''
+    request_id: int
     exception: BaseException
+    priority: int = 1
     mtype: MessageType = MessageType.USERFUNC_ERROR
 
 
@@ -62,12 +81,16 @@ class UserFuncErrorMessage(BaseMessage):
 @dataclasses.dataclass
 class StatusRequestMessage(BaseMessage):
     '''Resource asks process for their present status.'''
+    request_id: int
+    priority: int = 1
     mtype: MessageType = MessageType.STATUS_REQUEST
 
 @dataclasses.dataclass
 class WorkerStatusMessage(BaseMessage):
     '''Process sends status to resource.'''
+    request_id: int
     status: WorkerStatus
+    priority: int = 1
     mtype: MessageType = MessageType.WORKER_STATUS
 
 

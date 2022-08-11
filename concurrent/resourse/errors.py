@@ -16,13 +16,13 @@ class WorkerIsDeadError(WorkerResourceBaseException):
 class WorkerIsAliveError(WorkerResourceBaseException):
     pass
 
-class UnidentifiedMessageReceivedError(WorkerResourceBaseException):
+class UnidentifiedMessageReceived(WorkerResourceBaseException):
     pass#message = f'Worker received an invalid message.'
 
-class ProcessReceivedUnidentifiedMessage(WorkerResourceBaseException):
+class ProcessReceivedUnidentifiedMessage(UnidentifiedMessageReceived):
     pass#message = 'This WorkerProcess received an unidentified message.'
 
-class ResourceReceivedUnidentifiedMessage(WorkerResourceBaseException):
+class ResourceReceivedUnidentifiedMessage(UnidentifiedMessageReceived):
     pass#message = 'This WorkerResource received an unidentified message.'
 
 
