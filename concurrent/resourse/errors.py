@@ -17,13 +17,19 @@ class WorkerIsAliveError(WorkerResourceBaseException):
     pass
 
 class UnidentifiedMessageReceived(WorkerResourceBaseException):
-    pass#message = f'Worker received an invalid message.'
+    def __init__(self, message, *args, **kwargs):
+        self.message = message
+        super().__init__(*args, **kwargs)
 
-class ProcessReceivedUnidentifiedMessage(UnidentifiedMessageReceived):
+class ProcessReceivedUnidentifiedMessage(WorkerResourceBaseException):
     pass#message = 'This WorkerProcess received an unidentified message.'
 
-class ResourceReceivedUnidentifiedMessage(UnidentifiedMessageReceived):
+class ResourceReceivedUnidentifiedMessage(WorkerResourceBaseException):
     pass#message = 'This WorkerResource received an unidentified message.'
+
+
+class MessageTypeNotHandledError(WorkerResourceBaseException):
+    pass
 
 
 class UserFuncRaisedException(Exception):

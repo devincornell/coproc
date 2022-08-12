@@ -7,14 +7,27 @@ from .errors import *
 from .messages import MessageType, BaseMessage, DataPayloadMessage, WorkerStatusMessage
 from .workerstatus import WorkerStatus
 
+class EmptyTimer:
+    def __enter__(self):
+        return self
+    def __exit__(self):
+        pass
+
 @dataclasses.dataclass
-class MessageHandler:
+class Messenger:
     '''Manages sending/receiving messages on both Resource and Process side.
     This class is needed to manage a data queue so that both sides can prioritize messages.
     '''
     pipe: multiprocessing.Pipe
     valid_msg_types: typing.Set[MessageType]
+    timer_ctx_manager: typing.Any = dataclasses.field(default_factory=EmptyTimer)
     data_queue: collections.deque = dataclasses.field(default_factory=collections.deque)
+
+    ################################### Helpful Properties ###################################
+    @property
+    def queue_size(self):
+        '''Get size of the message queue.'''
+        return len(self.data_queue)
 
     ################################### Low-Level Send/Receive ###################################
     def get_next_message(self) -> DataPayloadMessage:
@@ -45,21 +58,18 @@ class MessageHandler:
 
     def recv_message(self) -> BaseMessage:
         '''Receives the next message from the pipe. Blocking!'''
-        
-        # wait to receive data
         try:
-            #with self.status.time_wait() as t:
-            message = self.pipe.recv()
+            with self.timer_ctx_manager as t:
+                # this is blocking
+                message = self.pipe.recv()
         except (EOFError, BrokenPipeError):
             exit(1)
             
         try:
             if message.mtype not in self.valid_msg_types:
-                raise UnidentifiedMessageReceived()
+                raise UnidentifiedMessageReceived(message)
         except AttributeError:
-            raise UnidentifiedMessageReceived()
-            #exception = ProcessReceivedUnidentifiedMessage(f'Worker {self.status.pid} received unidentified message: {message}.')
-            #self.send_message(WorkerErrorMessage(None, exception))
+            raise UnidentifiedMessageReceived(message)
 
         return message
 
