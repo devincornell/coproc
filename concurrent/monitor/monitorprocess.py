@@ -6,52 +6,19 @@ import multiprocessing.connection
 import multiprocessing.context
 import pandas as pd
 
-from .workerprocess import BaseWorkerProcess, SendPayloadType, RecvPayloadType
-#from .messenger import PriorityMessenger
-from .messenger import ResourceRequestedClose, DataMessage
-from .workerresource import WorkerResource
-from .messenger import PriorityMessenger
+from ..messenger import ResourceRequestedClose, PriorityMessenger
+from ..workerresource import WorkerResource
 
-# idk why
-import enum
-class MonitorMessageType(enum.Enum):
-    ADD_NOTE = enum.auto()
-    REQUEST_STATS = enum.auto()
-    STATS_DATA = enum.auto()
-
-class MonitorMessage:
-    mtype: MonitorMessageType
-    priority: float
-
-@dataclasses.dataclass
-class SubmitNoteMessage(MonitorMessage):
-    '''Send generic data to the other end of the pipe, using priority of sent messsage.
-    NOTE: this is designed to allow users to access benefits of user-defined queue.
-    '''
-    note: str
-    priority: float = 0.0 # lower priority is more important
-    mtype: MonitorMessageType = MonitorMessageType.ADD_NOTE
-    
-@dataclasses.dataclass
-class RequestStatsMessage(MonitorMessage):
-    priority: float = 0.0
-    mtype: MonitorMessageType = MonitorMessageType.REQUEST_STATS
-    
-@dataclasses.dataclass
-class StatsDataMessage(MonitorMessage):
-    '''Send collected data to main process.'''
-    notes: typing.List[Note]
-    stats: typing.List[Stat]
-    priority: float = 0.0
-    mtype: MonitorMessageType = MonitorMessageType.STATS_DATA
-    
-#@dataclasses.dataclass
-#class DataMessage(MonitorMessage):
-#    payload: SendPayloadType
-#    priority: float = 0.0
-#    mtype: MonitorMessageType = MonitorMessageType.DATA
+from .monitormessenger import MonitorMessengerInterface, MonitorMessageType, SubmitNoteMessage, RequestStatsMessage, StatsDataMessage
 
 import datetime
+
+
+
+
+import os
+
+
 
 @dataclasses.dataclass
 class Note:
@@ -109,7 +76,7 @@ class Stat:
         return self.memory_info.rss
 
 @dataclasses.dataclass
-class MonitorWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPayloadType]):
+class MonitorWorkerProcess:
     '''Simply receives data, processes it using worker_target, and sends the result back immediately.'''
     pid: int
     include_children: bool
@@ -190,72 +157,3 @@ class MonitorWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, Re
     @staticmethod
     def time_bin(dt: datetime.datetime, time_resolution: datetime.timedelta) -> datetime.datetime:
         return dt.timestamp()/time_resolution.total_seconds()
-
-import matplotlib.pyplot as plt
-import plotnine
-
-@dataclasses.dataclass
-class StatsResult:
-    stats: pd.DataFrame
-    notes: pd.DataFrame
-    
-    @property
-    def num_stats(self):
-        return self.stats.shape[0]
-    
-    @property
-    def num_notes(self):
-        return self.notes.shape[0]
-    
-    def save_stats_plot(self, filename: str):
-        #print(self.stats.columns)
-        #print(self.stats)
-        self.stats['memory_usage_gb'] = self.stats['memory_usage'] / 1e9
-        p = (plotnine.ggplot(self.stats) 
-            + plotnine.aes(x='monitor_minutes', y='memory_usage_gb', group='pid') + plotnine.geom_line()
-            + plotnine.ggtitle(f'Memory Usage')
-            + plotnine.labs(x='Time (minutes)', y='Memory Usage (GB)')
-        )
-        p.save(filename)
-        return p
-        
-    def save_stats_pyplot(self, filename: str):
-        fig, ax = plt.subplots()
-        self.stats.plot(ax=ax)
-        fig.savefig(filename)
-        plt.close(fig)
-        return fig
-
-@dataclasses.dataclass
-class MonitorMessengerInterface:
-    messenger: PriorityMessenger
-    
-    def get_stats(self) -> typing.Tuple[pd.DataFrame,pd.DataFrame]:
-        self.messenger.request_data(RequestStatsMessage())
-        status_data: StatsDataMessage = self.messenger.receive_data(blocking=True)
-        return StatsResult(
-            stats = status_data.stats,
-            notes = status_data.notes,
-        )
-
-import os
-
-class Monitor:
-    def __init__(self, pid: int = None, include_children: bool = True, snapshot_seconds: float = 0.5):
-        self.snapshot_seconds = snapshot_seconds
-        self.pid = pid if pid is not None else os.getpid()
-        self.include_children = include_children
-        self.res = WorkerResource(
-            worker_process_type = MonitorWorkerProcess,
-        )
-    def __enter__(self):
-        self.res.start(
-            pid=self.pid, 
-            include_children = self.include_children,
-            snapshot_seconds = self.snapshot_seconds,
-        )
-        return MonitorMessengerInterface(self.res.messenger)
-    
-    def __exit__(self, *args):
-        self.res.terminate(check_alive=False)
-

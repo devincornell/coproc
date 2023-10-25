@@ -1,9 +1,10 @@
 import time
 import typing
 
-#import sys
-#sys.path.append('..')
-import concurrent
+import sys
+sys.path.append('..')
+import conproc
+
 import dataclasses 
 
 import datetime
@@ -14,7 +15,7 @@ def test_monitor_process():
     pass
 
 def test_monitor():
-    with concurrent.Monitor(snapshot_seconds=0.1) as m:
+    with conproc.Monitor(snapshot_seconds=0.1) as m:
         a = list()
         for i in tqdm.tqdm(range(int(1e7))):
             i

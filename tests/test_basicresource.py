@@ -1,16 +1,12 @@
 import time
 import typing
 
-#import sys
-#sys.path.append('..')
+import sys
+sys.path.append('..')
 import concurrent
-import dataclasses 
-
-
+import dataclasses
 
 def test_custom_process():
-        
-    
     print(f'============ starting mapworker =============')
     k = 0
     with concurrent.MapWorker() as w:
@@ -19,8 +15,6 @@ def test_custom_process():
             print(f'{i=}')
             assert(i == k)
             k += 1
-
-
 
 def echo_test(v: typing.Any) -> typing.Any:
     print('echoing', v)
