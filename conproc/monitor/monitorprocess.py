@@ -81,6 +81,7 @@ class MonitorWorkerProcess:
     pid: int
     include_children: bool
     snapshot_seconds: float
+    messenger: PriorityMessenger
     processes: typing.List[psutil.Process] = dataclasses.field(default_factory=list)
     notes: typing.List[Note] = dataclasses.field(default_factory=list)
     stats: typing.List[Stat] = dataclasses.field(default_factory=list)

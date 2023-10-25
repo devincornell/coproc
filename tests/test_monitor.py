@@ -15,9 +15,9 @@ def test_monitor_process():
     pass
 
 def test_monitor():
-    with conproc.Monitor(snapshot_seconds=0.1) as m:
+    with conproc.Monitor(snapshot_seconds=0.05) as m:
         a = list()
-        for i in tqdm.tqdm(range(int(1e7))):
+        for i in tqdm.tqdm(range(int(1e6))):
             i
             a.append(i)
         try:
@@ -25,8 +25,11 @@ def test_monitor():
         except BrokenPipeError as e:
             exit()
     print(result.num_stats)
-    result.save_stats_plot('test.png')
-        
+    
+    import os
+    os.makedirs('tmp', exist_ok=True)
+    result.save_stats_plot('tmp/test.png')
+    #os.unlink('tmp')
 
 if __name__ == '__main__':
     test_monitor_process()
