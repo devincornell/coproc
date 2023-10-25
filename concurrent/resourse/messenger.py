@@ -30,12 +30,18 @@ class Messenger:
         return len(self.data_queue)
 
     ################################### Low-Level Send/Receive ###################################
-    def get_next_message(self) -> DataPayloadMessage:
-        '''Will empty the incoming pipe and return non-data messages first.'''
+    def get_next_message(self, ignore_data: bool = False) -> DataPayloadMessage:
+        '''Will empty the incoming pipe and return non-data messages first.
+        Args:
+            ignore_data: True if user wants to get the next non-data message, while 
+                queueing remaining data.
+            request_id: id of the data object to look out for. When the messenger
+                receives a message with that ID, it will share it immediately, otherwise
+                it will keep adding to the data queue.
+        '''
         while True:
-            
             # if no more messages to receive and the queue has some data in it
-            if not self.poll_message() and len(self.data_queue) > 0:
+            if not self.poll_message() and len(self.data_queue) > 0 and not ignore_data:
                 return self.data_queue.pop()
             
             # potentially blocking call    

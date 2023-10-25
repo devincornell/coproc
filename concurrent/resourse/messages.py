@@ -20,12 +20,12 @@ class MessageType(enum.Enum):
     WORKER_ERROR = enum.auto()
     WORKER_STATUS = enum.auto()
     
-valid_resource_recv_message_types = set(
+valid_process_recv_message_types = set(
     MessageType.DATA,
     MessageType.STATUS_REQUEST,
     MessageType.CLOSE,
 )
-valid_process_recv_message_types = set(
+valid_resource_recv_message_types = set(
     MessageType.DATA,
     MessageType.WORKER_STATUS,
     MessageType.USERFUNC_ERROR,

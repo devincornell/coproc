@@ -7,10 +7,10 @@ from multiprocessing import Lock, Pipe, Pool, Process, Value
 from typing import Any, Callable, Dict, Iterable, List, NewType, Tuple, Union
 
 from .errors import *
-from .messages import (valid_resource_recv_message_types, DataPayloadMessage, SigCloseMessage, StatusRequestMessage)
+from .messages import (MessageType, valid_resource_recv_message_types, DataPayloadMessage, SigCloseMessage, StatusRequestMessage)
 from .workerstatus import WorkerStatus
 from .workerprocess import WorkerProcess
-from .messagehandler import MessageHandler
+from .messages import Messages
 
 @dataclasses.dataclass
 class WorkerResource:
@@ -26,7 +26,7 @@ class WorkerResource:
     def __post_init__(self):
         ctx = multiprocessing.get_context(self.method)
         self.pipe, worker_pipe = Pipe(duplex=True)
-        self.messenger = MessageHandler(self.pipe, valid_resource_recv_message_types)
+        self.messenger = Messages(self.pipe, valid_resource_recv_message_types)
         
         self.proc = ctx.Process(
             target=WorkerProcess(
@@ -68,6 +68,33 @@ class WorkerResource:
         self.send_payload(StatusRequestMessage(self.get_next_id()))
         return self.recv().status
     
+    ############### Message interface ###############
+    def get_next_id(self):
+        self.request_id_ctr += 1
+        return self.request_id_ctr - 1
+    
+    def receive(self) -> DataPayloadMessage:
+        # main receive/send loop
+        while True:
+
+            # wait to receive data (and check for any other messages)
+            try:
+                message = self.messenger.get_next_message()
+            except UnidentifiedMessageReceived as e:
+                raise ResourceReceivedUnidentifiedMessage(f'Worker process {self.status.pid} received unidentified message: {e.message}')
+            
+            if message.mtype == MessageType.DATA:
+                return message.data
+                            
+            # return status of worker
+            elif message.mtype == MessageType.STATUS_REQUEST:
+                self.status.update_uptime()
+                self.messenger.send_message(WorkerStatusMessage(self.status))
+            
+            else:
+                raise MessageTypeNotHandledError(f'{self.__class__.__name__} did not handle message of type {message.mtype}.')
+
+    
     ############### Asychronous Low-Level Interface Methods ###############
     #def recv_next_data(self) -> BaseMessage:
     #    '''Will empty the incoming pipe and process non-data messages first.'''
@@ -96,8 +123,8 @@ class WorkerResource:
     #    return self.recv().data
     #
     #def send_data(self, data: Any, **kwargs) -> None:
-        '''Send any data to worker process to be handled by user function.'''
-        return self.send_payload(DataPayloadMessage(self.get_next_id(), data, **kwargs))
+    #    '''Send any data to worker process to be handled by user function.'''
+    #    return self.send_payload(DataPayloadMessage(self.get_next_id(), data, **kwargs))
 
     #def update_userfunc(self, func: Callable, *args, **kwargs):
     #    '''Send a new UserFunc to worker process.
@@ -198,10 +225,7 @@ class WorkerResource:
             print('This WorkerResource has no process (proc attribute).')
             pass
         
-    ############### Process interface ###############
-    def get_next_id(self):
-        self.request_id_ctr += 1
-        return self.request_id_ctr - 1
+
 
 #class WorkerPool(list):
 #
