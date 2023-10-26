@@ -10,6 +10,7 @@ from ..messenger import ResourceRequestedClose, PriorityMessenger
 from ..workerresource import WorkerResource
 
 from .monitormessenger import MonitorMessengerInterface, MonitorMessageType, SubmitNoteMessage, RequestStatsMessage, StatsDataMessage
+from .statsresult import StatsResult
 
 import datetime
 
@@ -22,12 +23,19 @@ import os
 
 @dataclasses.dataclass
 class Note:
+    pid: int
     text: str
     ts: datetime.datetime
+    memory_usage: int
     
     @classmethod
-    def now(self, text: str):
-        return self(text=text, ts=datetime.datetime.now())
+    def now(cls, process: psutil.Process, text: str, memory_usage: int):
+        return cls(
+            pid = process.pid,
+            text=text, 
+            ts=datetime.datetime.now(),
+            memory_usage = memory_usage, # process.memory_info().rss
+        )
     
     def asdict(self) -> typing.Dict[str, float]:
         return dataclasses.asdict(self)
@@ -92,7 +100,14 @@ class MonitorWorkerProcess:
         '''Main event loop for the process.
         '''
         print(f'starting main loop')
+        
+        self.stats.append(Stat.capture_window(
+            process = self.root_process(), 
+            capture_time = datetime.timedelta(seconds=self.snapshot_seconds),
+        ))
+        
         self.processes = self.get_processes()
+        
         # main receive/send loop
         msg = None
         while True:
@@ -105,13 +120,10 @@ class MonitorWorkerProcess:
             for msg in msgs:
                 if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
                 if msg.mtype == MonitorMessageType.ADD_NOTE:
-                    self.notes.append(Note.now(msg.note))
+                    self.notes.append(Note.now(self.root_process(), msg.note, self.stats[-1].memory_usage))
                 elif msg.mtype == MonitorMessageType.REQUEST_STATS:
                     self.messenger.send_reply(
-                        StatsDataMessage(
-                            notes=self.get_notes_df(),
-                            stats=self.get_stats_df(),
-                        )
+                        StatsDataMessage(self.stats_result())
                     )
                 else:
                     raise NotImplementedError(f'unknown message type: {msg.mtype}')
@@ -125,33 +137,34 @@ class MonitorWorkerProcess:
                 ))
     
     def get_processes(self) -> typing.List[psutil.Process]:
-        root_process = psutil.Process(self.pid)
+        root_process = self.root_process()
         processes = [root_process]
         
         if self.include_children:
             processes += [c for c in root_process.children(recursive=True)]
         return processes
-
+    
+    def root_process(self) -> psutil.Process:
+        return psutil.Process(self.pid)
+    
+    def stats_result(self) -> StatsResult:
+        return StatsResult(
+            notes=self.get_notes_df(),
+            stats=self.get_stats_df(),
+        )
     
     def get_notes_df(self) -> pd.DataFrame:
-        
         df = pd.DataFrame([n.asdict() for n in self.notes])
-        if df.shape[0] == 0:
-            return df
-        
-        #df['time_bin'] = df['ts'].map(lambda dt: self.time_bin(dt, time_resolution))
-        #df['time_bin'] -= df['time_bin'].min()
-        df['monitor_time'] = df['end_ts'] - df['end_ts'].min()
-        df['monitor_minutes'] = df['monitor_time'].map(lambda td: td.total_seconds()/60)
+        if df.shape[0] > 0:
+            df['monitor_time'] = df['ts'] - df['ts'].min()
+            df['monitor_minutes'] = df['monitor_time'].map(lambda td: td.total_seconds()/60)
         return df
     
     def get_stats_df(self) -> pd.DataFrame:
         df = pd.DataFrame([s.asdict() for s in self.stats])
-        #df['time_bin'] = df['ts'].map(lambda dt: self.time_bin(dt, time_resolution))
-        #df['pid'] = df.index.get_level_values('pid')
-        #df['time_bin'] = df.index.get_level_values('time_bin')
-        df['monitor_time'] = df['end_ts'] - df['end_ts'].min()
-        df['monitor_minutes'] = df['monitor_time'].map(lambda td: td.total_seconds()/60)
+        if df.shape[0] > 0:
+            df['monitor_time'] = df['end_ts'] - df['end_ts'].min()
+            df['monitor_minutes'] = df['monitor_time'].map(lambda td: td.total_seconds()/60)
         return df
     
     @staticmethod

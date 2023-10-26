@@ -6,7 +6,7 @@ import multiprocessing.connection
 import multiprocessing.context
 import pandas as pd
 
-from .statusresult import StatsResult
+from .statsresult import StatsResult
 
 if typing.TYPE_CHECKING:
     from ..messenger import PriorityMessenger
@@ -39,8 +39,7 @@ class RequestStatsMessage(MonitorMessage):
 @dataclasses.dataclass
 class StatsDataMessage(MonitorMessage):
     '''Send collected data to main process.'''
-    notes: typing.List[Note]
-    stats: typing.List[Stat]
+    result: StatsResult
     priority: float = 0.0
     mtype: MonitorMessageType = MonitorMessageType.STATS_DATA
 
@@ -51,8 +50,8 @@ class MonitorMessengerInterface:
     def get_stats(self) -> StatsResult:
         self.messenger.send_request(RequestStatsMessage())
         status_data: StatsDataMessage = self.messenger.receive_blocking()
-        return StatsResult(
-            stats = status_data.stats,
-            notes = status_data.notes,
-        )
+        return status_data.result
+    
+    def add_note(self, text: str):
+        self.messenger.send_norequest(SubmitNoteMessage(note=text))
 
