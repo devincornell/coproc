@@ -5,7 +5,7 @@ import collections
 ItemType = typing.TypeVar('ItemType')
 
 @dataclasses.dataclass
-class PriorityQueue:
+class PriorityQueue(typing.Generic[ItemType]):
     queues: typing.Dict[float, collections.deque[ItemType]] = dataclasses.field(default_factory=dict)
     current_priority: typing.Optional[float] = None
     ct: int = 0
