@@ -112,7 +112,7 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     
     #################### Asynchronous availability methods ####################
     def receive_available(self, channel_id: ChannelID = None) -> typing.List[RecvPayloadType]:
-        '''Receive until receiving a message with the given channel, then return its payload.'''
+        '''Receive currently available messanges.'''
         return [m.payload for m in self.receive_available_messages(channel_id=channel_id)]
         
     def receive_available_messages(self, channel_id: ChannelID = None) -> typing.List[DataMessage]:

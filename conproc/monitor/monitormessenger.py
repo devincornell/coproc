@@ -50,7 +50,7 @@ class MonitorMessengerInterface:
     
     def get_stats(self) -> StatsResult:
         self.messenger.send_request(RequestStatsMessage())
-        status_data: StatsDataMessage = self.messenger.receive_data(blocking=True)
+        status_data: StatsDataMessage = self.messenger.receive_blocking()
         return StatsResult(
             stats = status_data.stats,
             notes = status_data.notes,

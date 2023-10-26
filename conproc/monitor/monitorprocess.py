@@ -86,6 +86,7 @@ class MonitorWorkerProcess:
     notes: typing.List[Note] = dataclasses.field(default_factory=list)
     stats: typing.List[Stat] = dataclasses.field(default_factory=list)
     verbose: bool = False
+    messages_received: int = 0
     
     def __call__(self):
         '''Main event loop for the process.
@@ -95,16 +96,14 @@ class MonitorWorkerProcess:
         # main receive/send loop
         msg = None
         while True:
+            
             try:
-                msg = self.messenger.receive_data(blocking=False)
-                if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
-            except IndexError:
-                #if self.verbose: print(f'[{self.pid}] no more messages')
-                pass
+                msgs = self.messenger.receive_available()
             except ResourceRequestedClose:
                 exit()
-                
-            if msg is not None:
+            
+            for msg in msgs:
+                if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
                 if msg.mtype == MonitorMessageType.ADD_NOTE:
                     self.notes.append(Note.now(msg.note))
                 elif msg.mtype == MonitorMessageType.REQUEST_STATS:
