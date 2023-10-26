@@ -2,7 +2,7 @@
 
 from .monitor import *
 from .monitormessenger import *
-from .statusresult import *
+from .statsresult import *
 from .monitorprocess import *
 
 

@@ -17,6 +17,7 @@ class MonitorMessageType(enum.Enum):
     ADD_NOTE = enum.auto()
     REQUEST_STATS = enum.auto()
     STATS_DATA = enum.auto()
+    REQUEST_SAVE_FIG = enum.auto()
 
 class MonitorMessage:
     mtype: MonitorMessageType
@@ -44,14 +45,23 @@ class StatsDataMessage(MonitorMessage):
     mtype: MonitorMessageType = MonitorMessageType.STATS_DATA
 
 @dataclasses.dataclass
+class RequestSaveFigureMessage(MonitorMessage):
+    fname: str
+    save_kwargs: typing.Dict[str, typing.Any]
+    priority: float = 0.0
+    mtype: MonitorMessageType = MonitorMessageType.REQUEST_SAVE_FIG
+
+@dataclasses.dataclass
 class MonitorMessengerInterface:
     messenger: PriorityMessenger
     
+    def add_note(self, text: str):
+        self.messenger.send_norequest(SubmitNoteMessage(note=text))
+        
+    def save_stats_plot(self, fname: str, **save_kwargs):
+        self.messenger.send_norequest(RequestSaveFigureMessage(fname=fname, save_kwargs=save_kwargs))
+
     def get_stats(self) -> StatsResult:
         self.messenger.send_request(RequestStatsMessage())
         status_data: StatsDataMessage = self.messenger.receive_blocking()
         return status_data.result
-    
-    def add_note(self, text: str):
-        self.messenger.send_norequest(SubmitNoteMessage(note=text))
-

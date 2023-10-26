@@ -34,19 +34,20 @@ class StatsResult:
             + plotnine.labs(x='Time (minutes)', y='Memory Usage (GB)')
         )
         
-        if self.num_notes > 0:
-            self.notes['memory_usage_gb'] = self.stats['memory_usage'] / 1e9
-            p = (p 
-                + plotnine.geom_text(
-                    data = self.notes,
-                    mapping = plotnine.aes(x='monitor_minutes', y='memory_usage_gb', label='text'),
-                    size=5,
+        if False:
+            if self.num_notes > 0:
+                self.notes['memory_usage_gb'] = self.stats['memory_usage'] / 1e9
+                p = (p 
+                    + plotnine.geom_text(
+                        data = self.notes,
+                        mapping = plotnine.aes(x='monitor_minutes', y='memory_usage_gb', label='text'),
+                        size=5,
+                    )
+                    + plotnine.geom_point(
+                        data=self.notes,
+                        mapping = plotnine.aes(x='monitor_minutes', y='memory_usage_gb'),
+                    )
                 )
-                + plotnine.geom_point(
-                    data=self.notes,
-                    mapping = plotnine.aes(x='monitor_minutes', y='memory_usage_gb'),
-                )
-            )
         
         p.save(filename, **kwargs)
         return p

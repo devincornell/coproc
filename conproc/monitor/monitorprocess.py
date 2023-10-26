@@ -125,11 +125,11 @@ class MonitorWorkerProcess:
                     self.messenger.send_reply(
                         StatsDataMessage(self.stats_result())
                     )
+                elif msg.mtype == MonitorMessageType.REQUEST_SAVE_FIG:
+                    self.stats_result().save_stats_plot(msg.fname, **msg.save_kwargs)
                 else:
                     raise NotImplementedError(f'unknown message type: {msg.mtype}')
-                    
-                msg = None
-            
+                                
             for p in self.processes:
                 self.stats.append(Stat.capture_window(
                     process = p, 
