@@ -27,11 +27,11 @@ def test_monitor():
     
     with monitor as m:
         a = list()
-        for i in tqdm.tqdm(range(int(1e8))):
+        for i in tqdm.tqdm(range(int(1e3))):
             i
             a.append(i)
             #if i > 0 and i % 10000 == 0:
-            if i % 10000000 == 0:
+            if i % 10 == 0:
                 m.add_note(f'Note {i}')
                 print()
                 result = m.get_stats()

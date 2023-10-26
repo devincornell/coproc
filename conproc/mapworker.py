@@ -53,7 +53,7 @@ class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPa
         # main receive/send loop
         while True:
             try:
-                msg = self.messenger.receive_data()
+                msg = self.messenger.receive_blocking()
             except ResourceRequestedClose:
                 exit()
             if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
@@ -76,7 +76,7 @@ class MapMessengerInterface:
     messenger: PriorityMessenger
         
     def apply_async(self, target: typing.Callable, data: typing.Iterable[typing.Any]) -> typing.List[typing.Any]:
-        self.messenger.send_data_noreply(UpdateUserFuncMessage(target))
+        self.messenger.send_norequest(UpdateUserFuncMessage(target))
         self.messenger.send_request_multiple([DataMessage(d) for d in data])
         
     def receive(self) -> typing.Generator[RecvPayloadType]:
