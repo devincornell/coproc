@@ -37,7 +37,7 @@ class RequestCtr:
 
 @dataclasses.dataclass
 class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
-    '''Handles messaging to/from a multiprocessing pipe.'''
+    '''Handles messaging to/from a multiprocessing pipe with prioritization and message channels.'''
     pipe: multiprocessing.connection.Connection
     queue: PriorityMultiQueue[Message] = dataclasses.field(default_factory=PriorityMultiQueue)
     request_ctr: RequestCtr = dataclasses.field(default_factory=RequestCtr)
