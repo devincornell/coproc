@@ -8,26 +8,43 @@ import traceback
 
 from .messages import SendPayloadType, RecvPayloadType, Message, MessageType, DataMessage, EncounteredErrorMessage, CloseRequestMessage
 from .exceptions import ResourceRequestedClose, MessageNotRecognizedError
-from .priorityqueue import PriorityQueue
+#from .priorityqueue import PriorityQueue
+from .prioritymultiqueue import PriorityMultiQueue, ChannelID
 
 import collections
+
+import enum
+class ChannelNotSetSentinel(enum.Enum):
+    CHANNEL_NOT_SET = enum.auto()
+
+CHANNEL_NOT_SET = ChannelNotSetSentinel.CHANNEL_NOT_SET
+'''Used as default for channel parameter.'''
+
+@dataclasses.dataclass
+class RequestCtr:
+    requests: collections.Counter[ChannelID] = dataclasses.field(default_factory=collections.Counter)
+    replies: collections.Counter[ChannelID] = dataclasses.field(default_factory=collections.Counter)
+    
+    def remaining(self, channel_id: ChannelID) -> int:
+        return self.requests[channel_id] - self.replies[channel_id]
+    
+    def sent_request(self, channel_id: ChannelID):
+        self.requests[channel_id] += 1
+        
+    def received_reply(self, channel_id: ChannelID):
+        self.replies[channel_id] += 1
+    
 
 @dataclasses.dataclass
 class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     '''Handles messaging to/from a multiprocessing pipe.'''
     pipe: multiprocessing.connection.Connection
-    queue: PriorityQueue[Message] = dataclasses.field(default_factory=PriorityQueue)
-    sent_requests: int = 0
-    received_replies: int = 0
-    
+    queue: PriorityMultiQueue[Message] = dataclasses.field(default_factory=PriorityMultiQueue)
+    request_ctr: RequestCtr = dataclasses.field(default_factory=RequestCtr)
+        
     @classmethod
-    def new(cls, pipe: multiprocessing.connection.Connection, **kwargs) -> PriorityMessenger:
-        '''Return new messenger with new pipe.'''
-        return cls(pipe=pipe, **kwargs)
-    
-    @classmethod
-    def make_pair(cls, **kwargs) -> typing.Tuple[PriorityMessenger, PriorityMessenger]:
-        '''Return (process, resource) pair of messengers'''
+    def new_pair(cls, **kwargs) -> typing.Tuple[PriorityMessenger, PriorityMessenger]:
+        '''Return (process, resource) pair of messengers connected by a duplex pipe.'''
         resource_pipe, process_pipe = multiprocessing.Pipe(duplex=True, **kwargs)
         return (
             cls(pipe=process_pipe, **kwargs),
@@ -35,28 +52,28 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         )
 
     ############### Request/reply interface ###############
-    def send_request_multiple(self, data: typing.Iterable[SendPayloadType]) -> None:
+    def send_request_multiple(self, data: typing.Iterable[SendPayloadType], channel_id: ChannelID = None) -> None:
         '''Blocking send of multiple data to pipe.'''
         for d in data:
-            self.send_request(d)
-
-    def send_request(self, data: SendPayloadType) -> None:
-        '''Send data that does require replies.'''
-        self.send_data_message(data, request_reply=True, is_reply=False)
-        self.sent_requests += 1
+            self.send_request(d, channel_id=channel_id)
         
-    def send_reply(self, data: RecvPayloadType) -> None:
+    def send_reply(self, data: RecvPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that acts as a reply to a request.'''
-        self.send_data_message(data, request_reply=False, is_reply=True)
+        self.send_data_message(data, request_reply=False, is_reply=True, channel_id=channel_id)
+        
+    def send_request(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
+        '''Send data that requires a reply.'''
+        self.send_data_message(data, request_reply=True, is_reply=False, channel_id=channel_id)
+        self.request_ctr.sent_request(channel_id)
     
-    def send_data_noreply(self, data: SendPayloadType) -> None:
+    def send_noreply(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that does not requre a reply.'''
-        self.send_data_message(data, request_reply=False, is_reply=False)
+        self.send_data_message(data, request_reply=False, is_reply=False, channel_id=channel_id)
     
     ############### Sending various message types ###############
-    def send_data_message(self, payload: SendPayloadType, request_reply: bool, is_reply: bool) -> None:
+    def send_data_message(self, payload: SendPayloadType, request_reply: bool, is_reply: bool, channel_id: ChannelID = None) -> None:
         '''Send data message.'''
-        self._send_message(DataMessage(payload=payload, request_reply=request_reply, is_reply=is_reply))
+        self._send_message(DataMessage(payload=payload, request_reply=request_reply, is_reply=is_reply, channel_id=channel_id))
         
     def send_close_request(self) -> None:
         '''Blocking send of close message to pipe.'''
@@ -69,51 +86,69 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         
     def _send_message(self, msg: Message) -> None:
         return self.pipe.send(msg)
-    
-    ############### receive methods ###############
-    def receive_remaining(self) -> typing.Generator[RecvPayloadType]:
+                
+    #################### Receive all messages we are waiting on ####################
+    def receive_remaining(self, channel_id: ChannelID = None) -> typing.Generator[RecvPayloadType]:
         '''Receive until the requested number of results have been received.'''
-        while self.remaining() > 0:
-            yield self.receive_data()
+        for m in self.receive_messages_remaining(channel_id=channel_id):
+            yield m.payload
             
-    def receive_available(self) -> typing.List[RecvPayloadType]:
-        '''Receive all results that this process has received as of now.'''
-        datas = list()
-        while self.available():
-            datas.append(self.receive_data())
-        return datas
+    def receive_messages_remaining(self, channel_id: ChannelID = None) -> typing.Generator[DataMessage]:
+        while self.remaining(channel_id) > 0:
+            yield self.receive_message_blocking(channel_id=channel_id)
     
-    def receive_data(self, blocking: bool = True) -> RecvPayloadType:
-        '''Receive payload of next data object.'''
-        return self.receive_data_message(blocking=blocking).payload
+    #################### Wait until we receive the next relevant message ####################
+    def receive_blocking(self, channel_id: ChannelID = None) -> RecvPayloadType:
+        '''Blocking receive payload from next data message of this channel.'''
+        return self.receive_message_blocking(channel_id=channel_id).payload
     
-    def receive_data_message(self, blocking: bool = True) -> DataMessage:
-        '''Return the next data object after processing other message types.'''
-        msg: Message = self._receive_message(blocking=blocking)
+    def receive_message_blocking(self, channel_id: ChannelID = None) -> DataMessage:
+        '''Receive until receiving a message with the given channel, then return it.'''
+        while self.pipe.poll() or self.queue.empty(channel_id=channel_id):
+            msg: Message = self._pipe_recv()
+            self._handle_message(msg)
+        return self.queue.get(channel_id=channel_id)
+    
+    #################### Asynchronous availability methods ####################
+    def receive_available(self, channel_id: ChannelID = None) -> typing.List[RecvPayloadType]:
+        '''Receive until receiving a message with the given channel, then return its payload.'''
+        return [m.payload for m in self.receive_available_messages(channel_id=channel_id)]
         
-        # handle message in different ways
+    def receive_available_messages(self, channel_id: ChannelID = None) -> typing.List[DataMessage]:
+        available = list()
+        while self.available(channel_id=channel_id):
+            available.append(self.queue.get(channel_id=channel_id))
+        return available
+    
+    def available(self, channel_id: ChannelID = None) -> int:
+        '''Number of data available in pipe at this time.'''
+        self._receive_and_handle_available_messages()
+        return self.queue.size(channel_id=channel_id)
+    
+    #################### Low-level message handling ####################
+    def _receive_and_handle_available_messages(self) -> None:
+        '''Receive all data from pipe and place into queue.'''
+        while self.pipe.poll():
+            msg: Message = self._pipe_recv()
+            self._handle_message(msg)
+        
+    def _handle_message(self, msg: Message):
+        '''Take appropriate action for message type. If data, add to queue.'''
         if msg.mtype is MessageType.DATA_PAYLOAD:
-            msg: DataMessage
+            self.queue.put(msg, msg.priority, msg.channel_id)
             if msg.is_reply:
-                self.received_replies += 1
-            return msg
+                self.request_ctr.received_reply(msg.channel_id)
+            
         elif msg.mtype is MessageType.ENCOUNTERED_ERROR:
-            msg: EncounteredErrorMessage
             ex = msg.exception
+            # NOTE: print exception stack trace here instead of send side in the future
             raise msg.exception
+        
         elif msg.mtype is MessageType.CLOSE_REQUEST:
             msg: CloseRequestMessage
             raise ResourceRequestedClose(f'Resource requested that this process close.')
         else:
             raise MessageNotRecognizedError(f'Message of type {msg.mtype} not recognized.')
-
-    def _receive_message(self, blocking: bool) -> Message:
-        '''Receive all data and place into queue before returning next.'''
-        while self.pipe.poll() or (self.queue.empty() and blocking):
-            msg: Message = self._pipe_recv()
-            self.queue.put(msg, msg.priority)
-            blocking = False
-        return self.queue.get()
 
     def _pipe_recv(self) -> Message:
         '''Receive data from pipe.'''
@@ -122,22 +157,17 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         except (EOFError, BrokenPipeError):
             raise BrokenPipeError(f'Tried to receive data when pipe was broken.')
 
-    ############### Check on pipe, queue, and send/receive counts ###############
-    def available(self) -> bool:
-        '''Check if data is in the pipe or queue.'''
-        return self.pipe.poll() or not self.queue.empty()
-    
-    def remaining(self) -> int:
+    ############### Check on pipe, queue, and send/receive counts ###############    
+    def remaining(self, channel_id: ChannelID = None) -> int:
         '''Number of results requested but not received.'''
-        return self.sent_requests - self.received_replies
+        return self.request_ctr.remaining(channel_id)
     
-    def queue_size(self) -> int:
-        '''Current size of queue.
-        NOTE: NOT remaining messsages to process. Can't tell 
-        '''
-        return self.queue.size()
+    def queue_size(self, channel_id: ChannelID = None) -> int:
+        '''Current size of queue.'''
+        return self.queue.size(channel_id=channel_id)
     
     def pipe_poll(self) -> bool:
+        '''Check if any items are in the pipe.'''
         return self.pipe.poll()
 
 

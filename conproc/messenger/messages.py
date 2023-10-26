@@ -2,15 +2,22 @@ from __future__ import annotations
 import typing
 import dataclasses
 import enum
-
+from .prioritymultiqueue import ChannelID
 
 SendPayloadType = typing.TypeVar('SendPayloadType')
 RecvPayloadType = typing.TypeVar('RecvPayloadType')
 
+#class ReservedChannels(enum.Enum):
+#    '''Reserved channels for internal use.'''
+#    SYSTEM_CHANNEL = enum.auto()
+
 class Message:
     '''Base class for messages containing priority comparisons.'''
     priority: float
+    #channel_id: ChannelID
     
+    # comparators were for builtin queue.PriorityQueue, 
+    #   but not needed for my custom implementations
     def __lt__(self, other: Message) -> bool:
         return self.priority < other.priority
     
@@ -41,12 +48,14 @@ class CloseRequestMessage(Message):
     '''Request that the other end of the pipe close.'''
     priority: float = float('-inf') # lower priority is more important
     mtype: MessageType = MessageType.CLOSE_REQUEST
+    #channel_id: ChannelID = ReservedChannels.SYSTEM_CHANNEL
     
 @dataclasses.dataclass
 class EncounteredErrorMessage(Message):
     exception: BaseException
     priority: float = float('-inf') # lower priority is more important
     mtype: MessageType = MessageType.ENCOUNTERED_ERROR
+    #channel_id: ChannelID = ReservedChannels.SYSTEM_CHANNEL
     
 @dataclasses.dataclass
 class DataMessage(Message):
@@ -56,7 +65,7 @@ class DataMessage(Message):
     payload: typing.Union[SendPayloadType, RecvPayloadType]
     request_reply: bool # whether to request a reply or not
     is_reply: bool # whether this is a reply to a request
-    request_id: typing.Hashable = None # id of request. ignored if not reply or not requesting reply
+    channel_id: ChannelID # set by the user in this case
     mtype: MessageType = MessageType.DATA_PAYLOAD
     
     @property
@@ -67,7 +76,12 @@ class DataMessage(Message):
             return float('inf')
 
 
-##################### Messages from Resource to Process #####################
+
+
+
+
+
+##################### Old Message Types #####################
 
 class MessageToProcessType(enum.Enum):
     SUBMIT_DATA = enum.auto()
