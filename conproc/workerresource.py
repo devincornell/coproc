@@ -9,10 +9,14 @@ from .workerprocess import BaseWorkerProcess
 from .messenger import PriorityMessenger, SendPayloadType, RecvPayloadType
 
 class WorkerIsAlreadyAliveError(BaseException):
-    pass
+    '''Used when trying to start a worker that is already alive.'''
 
 class WorkerIsAlreadyDeadError(BaseException):
-    pass
+    '''Used when trying to stop a worker that is already stopped.'''
+
+class WorkerIsDeadError(BaseException):
+    '''Used when accessing a resource that only exists when the worker is alive.'''
+
 
 @dataclasses.dataclass
 class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
@@ -34,16 +38,12 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     
     ############### Dunder ###############
     def __enter__(self) -> PriorityMessenger:
-        '''DO NOT USE YET! I COULD BE ONTO SOMETHING HERE THOUGH'''
+        '''Starts worker with no parameters and returns it.'''
         try:
             self.start()
         except WorkerIsAlreadyAliveError as e:
             raise WorkerIsAlreadyAliveError(f'Cannot enter context when worker is already alive: {self.pid=}') from e
-        try:
-            return self.messenger
-        except ValueError as e:
-            self.terminate()
-            raise e
+        return self
     
     def __exit__(self, *args):
         self.terminate()
@@ -127,13 +127,13 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     def proc(self) -> multiprocessing.Process:
         '''Get process.'''
         if self._proc is None:
-            raise ValueError(f'This resource does not have a working process: {self._proc=}')
+            raise WorkerIsDeadError(f'This resource does not have a working process: {self._proc=}')
         return self._proc
     
     @property
     def messenger(self) -> PriorityMessenger:
         '''Get messenger.'''
         if self._messenger is None:
-            raise ValueError(f'This resource does not have a working messenger: {self._messenger=}')
+            raise WorkerIsDeadError(f'This resource does not have a working messenger: {self._messenger=}')
         return self._messenger
     

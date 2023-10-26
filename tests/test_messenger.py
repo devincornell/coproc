@@ -5,19 +5,19 @@ import json
 
 import sys
 sys.path.append('..')
-import concurrent
+import conproc
 
 #import pydevin
 def test_messenger():
         
     # attach the two messengers
-    pm, rm = concurrent.get_messenger_pair()
+    pm, rm = conproc.get_messenger_pair()
     assert(rm.remaining() == 0)
     assert(not pm.available())
     
     # send resource -> process
     v = 'hi'
-    rm.request_data(v)
+    rm.send_request(v)
     assert(rm.remaining() == 1)
     assert(not rm.available())
     assert(pm.available())
@@ -40,7 +40,7 @@ def test_messenger():
     try:
         pm.receive_data()
         raise Exception('should not have gotten here')
-    except concurrent.ResourceRequestedClose as e:
+    except conproc.ResourceRequestedClose as e:
         print(e)
     
     assert(not rm.available())
@@ -54,7 +54,7 @@ def test_messenger():
     
     # handle other test    
     vs = [1,2,3]
-    rm.request_data_multiple(vs)
+    rm.send_request_multiple(vs)
     assert(rm.remaining() == len(vs))
     assert(not rm.available())
     for v in vs:
@@ -85,8 +85,8 @@ class TestClassLesser:
     
 @dataclasses.dataclass
 class MessengerTester:
-    proc_msngr: concurrent.PriorityMessenger
-    res_msngr: concurrent.PriorityMessenger
+    proc_msngr: conproc.PriorityMessenger
+    res_msngr: conproc.PriorityMessenger
     
     def test(self, proc_available: bool, res_available: bool, proc_remaining: int, res_remaining: int):
         assert(self.res_msngr.available() is res_available)
@@ -102,7 +102,7 @@ class TestError(BaseException):
     pass
 
 def test_priority_messenger():
-    proc_msngr, res_msngr = concurrent.PriorityMessenger.make_pair()
+    proc_msngr, res_msngr = conproc.PriorityMessenger.make_pair()
     tester = MessengerTester(proc_msngr, res_msngr)
     v = 1
     vs = [1, 2, 3]
@@ -117,7 +117,7 @@ def test_priority_messenger():
     tester.test(False, False, 0, 0)
     
     print(f'\n================== Testing request/reply ==================')
-    res_msngr.request_data(v)
+    res_msngr.send_request(v)
     tester.test(True, False, 0, 1)
     
     results = proc_msngr.receive_available()
@@ -165,7 +165,7 @@ def test_priority_messenger():
     try:
         proc_msngr.receive_available()
         raise Exception('should not have gotten here')
-    except concurrent.ResourceRequestedClose:
+    except conproc.ResourceRequestedClose:
         pass
     
     res_msngr.send_error(TestError('test error'))

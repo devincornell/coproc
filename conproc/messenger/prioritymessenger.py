@@ -14,8 +14,8 @@ import collections
 
 @dataclasses.dataclass
 class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
+    '''Handles messaging to/from a multiprocessing pipe.'''
     pipe: multiprocessing.connection.Connection
-    #queue: queue.PriorityQueue[Message] = dataclasses.field(default_factory=queue.PriorityQueue)
     queue: PriorityQueue[Message] = dataclasses.field(default_factory=PriorityQueue)
     sent_requests: int = 0
     received_replies: int = 0
@@ -35,12 +35,12 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         )
 
     ############### Request/reply interface ###############
-    def request_multiple(self, data: typing.Iterable[SendPayloadType]) -> None:
+    def send_request_multiple(self, data: typing.Iterable[SendPayloadType]) -> None:
         '''Blocking send of multiple data to pipe.'''
         for d in data:
-            self.request_data(d)
+            self.send_request(d)
 
-    def request_data(self, data: SendPayloadType) -> None:
+    def send_request(self, data: SendPayloadType) -> None:
         '''Send data that does require replies.'''
         self._send_message(DataMessage(data, request_reply=True, is_reply=False))
         self.sent_requests += 1

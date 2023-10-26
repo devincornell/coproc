@@ -49,7 +49,7 @@ class MonitorMessengerInterface:
     messenger: PriorityMessenger
     
     def get_stats(self) -> StatsResult:
-        self.messenger.request_data(RequestStatsMessage())
+        self.messenger.send_request(RequestStatsMessage())
         status_data: StatsDataMessage = self.messenger.receive_data(blocking=True)
         return StatsResult(
             stats = status_data.stats,

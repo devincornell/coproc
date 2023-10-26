@@ -49,7 +49,7 @@ class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPa
     def __call__(self):
         '''Main event loop for the process.
         '''
-        print(f'starting main loop')
+        if self.verbose: print(f'starting main loop')
         # main receive/send loop
         while True:
             try:
@@ -57,7 +57,6 @@ class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPa
             except ResourceRequestedClose:
                 exit()
             if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
-            #if self.verbose: print(f'{self.worker_target=}, {msg.mtype}, {MapMessageType.UPDATE_USER_FUNC=}')
             self.messages_received += 1
             if msg.mtype is MapMessageType.UPDATE_USER_FUNC:
                 self.worker_target = msg.user_func
@@ -68,7 +67,6 @@ class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPa
                 try:
                     result = self.worker_target(msg)
                     if self.verbose: print(f'send <<--', msg)
-                    #if self.verbose: print(f'{self.__class__.__name__} sending reply: {result}')
                     self.messenger.send_reply(result)
                 except Exception as e:
                     self.messenger.send_error(e)
