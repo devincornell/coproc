@@ -111,7 +111,7 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     ) -> typing.Tuple[PriorityMessenger, multiprocessing.context.ForkServerContext]:
         '''Get a messenger, process pair. Best to refresh the whole thing.'''
         ctx: multiprocessing.context.ForkServerContext = multiprocessing.get_context(method=self.method)
-        process_messenger, resource_messenger = PriorityMessenger.make_pair()
+        process_messenger, resource_messenger = PriorityMessenger.new_pair()
         target = self.worker_process_type(
             messenger = process_messenger, 
             **worker_kwargs,

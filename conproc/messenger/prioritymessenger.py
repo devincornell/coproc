@@ -60,7 +60,6 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     def send_request(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that requires a reply.'''
         self.send_data_message(data, request_reply=True, is_reply=False, channel_id=channel_id)
-        self.request_ctr.sent_request(channel_id)
         
     def send_reply(self, data: RecvPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that acts as a reply to a request.'''
@@ -73,6 +72,8 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     ############### Sending various message types ###############
     def send_data_message(self, payload: SendPayloadType, request_reply: bool, is_reply: bool, channel_id: ChannelID = None) -> None:
         '''Send data message.'''
+        if request_reply:
+            self.request_ctr.sent_request(channel_id)
         self._send_message(DataMessage(payload=payload, request_reply=request_reply, is_reply=is_reply, channel_id=channel_id))
         
     def send_close_request(self) -> None:
