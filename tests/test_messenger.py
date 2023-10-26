@@ -11,7 +11,7 @@ import conproc
 def test_messenger():
         
     # attach the two messengers
-    pm, rm = conproc.PriorityMessenger.make_pair()
+    pm, rm = conproc.PriorityMessenger.new_pair()
     assert(rm.remaining() == 0)
     assert(not pm.available())
     
@@ -21,33 +21,34 @@ def test_messenger():
     assert(rm.remaining() == 1)
     assert(not rm.available())
     assert(pm.available())
-    assert(pm.receive_data() == v)
+    assert(pm.receive_blocking() == v)
     assert(not pm.available())
     assert(rm.remaining() == 1)
     
     # send process -> resource
     pm.send_reply(v)
     assert(rm.available())
-    assert(rm.remaining() == 1)
-    assert(rm.receive_data() == v)
+    assert(rm.remaining())
+    assert(rm.receive_blocking() == v)
     assert(not rm.available())
     assert(rm.remaining() == 0)
     
     # handle requests to close the pipe
     rm.send_close_request()
     assert(rm.remaining() == 0) # not sure I care about this, but it does capture current behavior
-    assert(pm.available())
     try:
-        pm.receive_data()
+        assert(pm.available())
+        pm.receive_blocking()
         raise Exception('should not have gotten here')
     except conproc.ResourceRequestedClose as e:
         print(e)
     
     assert(not rm.available())
     pm.send_error(ValueError('test error was successful'))
-    assert(rm.available())
+    
     try:
-        rm.receive_data()
+        rm.available()
+        rm.receive_blocking()
         raise Exception('should not have gotten here')
     except ValueError as e:
         print(e)
@@ -59,14 +60,17 @@ def test_messenger():
     assert(not rm.available())
     for v in vs:
         assert(pm.available())
-        assert(pm.receive_data() == v)
+        assert(pm.receive_blocking() == v)
     assert(not pm.available())
+    
     [pm.send_reply(v) for v in vs]
     assert(rm.available())
-    assert(rm.remaining() == len(vs))
+    assert(rm.remaining())
     for tv,v in zip(vs, rm.receive_remaining()):
         assert(tv == v)
-    assert(not rm.available())
+    #print(rm.queue)
+    print(rm.available(), rm.remaining())
+    assert(rm.available() == 0)
     assert(rm.remaining() == 0)
     
     print(f'test messenger passed')
@@ -88,11 +92,16 @@ class MessengerTester:
     proc_msngr: conproc.PriorityMessenger
     res_msngr: conproc.PriorityMessenger
     
-    def test(self, proc_available: bool, res_available: bool, proc_remaining: int, res_remaining: int):
-        assert(self.res_msngr.available() is res_available)
-        assert(self.proc_msngr.available() is proc_available)
-        assert(self.res_msngr.remaining() == res_remaining)
-        assert(self.proc_msngr.remaining() == proc_remaining)
+    def test(self, proc_available: int, res_available: int, proc_remaining: int, res_remaining: int):
+        try:
+            assert(self.res_msngr.available() == res_available)
+            assert(self.proc_msngr.available() == proc_available)
+            assert(self.res_msngr.remaining() == res_remaining)
+            assert(self.proc_msngr.remaining() == proc_remaining)
+        except AssertionError as e:
+            print('test failed: ', end='', flush=True)
+            self.print()
+            raise e
         
     def print(self):
         print(f'{self.proc_msngr.available()=}, {self.res_msngr.available()=}, {self.proc_msngr.remaining()=}, {self.res_msngr.remaining()=}')
@@ -102,23 +111,24 @@ class TestError(BaseException):
     pass
 
 def test_priority_messenger():
-    proc_msngr, res_msngr = conproc.PriorityMessenger.make_pair()
+    proc_msngr, res_msngr = conproc.PriorityMessenger.new_pair()
     tester = MessengerTester(proc_msngr, res_msngr)
     v = 1
     vs = [1, 2, 3]
     
     print(f'\n================== Testing simple send/receive ==================')
-    tester.test(False, False, 0, 0)
+    tester.print()
+    tester.test(0, 0, 0, 0)
     
-    res_msngr.send_data_noreply(v)
-    tester.test(True, False, 0, 0)
+    res_msngr.send_norequest(v)
+    tester.test(1, 0, 0, 0)
     
-    assert(proc_msngr.receive_data() == v)
-    tester.test(False, False, 0, 0)
+    assert(proc_msngr.receive_blocking() == v)
+    tester.test(0, 0, 0, 0)
     
     print(f'\n================== Testing request/reply ==================')
     res_msngr.send_request(v)
-    tester.test(True, False, 0, 1)
+    tester.test(1, 0, 0, 1)
     
     results = proc_msngr.receive_available()
     tester.test(False, False, 0, 1)
@@ -127,12 +137,12 @@ def test_priority_messenger():
     
     proc_msngr.send_reply(results[0])
     tester.test(False, True, 0, 1)
-    assert(res_msngr.receive_data() == v)
+    assert(res_msngr.receive_blocking() == v)
     tester.test(False, False, 0, 0)
     
     res_msngr.send_request_multiple(vs)
     print(res_msngr.remaining())
-    tester.test(True, False, 0, len(vs))
+    tester.test(len(vs), False, 0, len(vs))
     assert(proc_msngr.receive_available() == vs)
     assert(res_msngr.remaining() == len(vs))
     [proc_msngr.send_reply(v) for v in vs]
@@ -161,16 +171,18 @@ def test_priority_messenger():
 
     print(f'\n================== Testing close/error ==================')
     res_msngr.send_close_request()
-    assert(proc_msngr.available())
+    
     try:
-        proc_msngr.receive_available()
+        proc_msngr.available()
         raise Exception('should not have gotten here')
     except conproc.ResourceRequestedClose:
-        pass
+        print('passed error test')
+    
+    tester.test(0, 0, 0, 0)
     
     res_msngr.send_error(TestError('test error'))
     try:
-        proc_msngr.receive_data()
+        proc_msngr.receive_blocking()
         raise Exception('should not have gotten here')
     except TestError:
         pass

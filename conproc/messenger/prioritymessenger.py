@@ -57,16 +57,16 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         for d in data:
             self.send_request(d, channel_id=channel_id)
         
-    def send_reply(self, data: RecvPayloadType, channel_id: ChannelID = None) -> None:
-        '''Send data that acts as a reply to a request.'''
-        self.send_data_message(data, request_reply=False, is_reply=True, channel_id=channel_id)
-        
     def send_request(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that requires a reply.'''
         self.send_data_message(data, request_reply=True, is_reply=False, channel_id=channel_id)
         self.request_ctr.sent_request(channel_id)
+        
+    def send_reply(self, data: RecvPayloadType, channel_id: ChannelID = None) -> None:
+        '''Send data that acts as a reply to a request.'''
+        self.send_data_message(data, request_reply=False, is_reply=True, channel_id=channel_id)
     
-    def send_noreply(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
+    def send_norequest(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that does not requre a reply.'''
         self.send_data_message(data, request_reply=False, is_reply=False, channel_id=channel_id)
     
@@ -107,7 +107,7 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         while self.pipe.poll() or self.queue.empty(channel_id=channel_id):
             msg: Message = self._pipe_recv()
             self._handle_message(msg)
-        return self.queue.get(channel_id=channel_id)
+        return self.pop_from_queue(channel_id=channel_id)
     
     #################### Asynchronous availability methods ####################
     def receive_available(self, channel_id: ChannelID = None) -> typing.List[RecvPayloadType]:
@@ -117,13 +117,20 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     def receive_available_messages(self, channel_id: ChannelID = None) -> typing.List[DataMessage]:
         available = list()
         while self.available(channel_id=channel_id):
-            available.append(self.queue.get(channel_id=channel_id))
+            available.append(self.pop_from_queue(channel_id=channel_id))
         return available
     
     def available(self, channel_id: ChannelID = None) -> int:
         '''Number of data available in pipe at this time.'''
         self._receive_and_handle_available_messages()
         return self.queue.size(channel_id=channel_id)
+    
+    def pop_from_queue(self, channel_id: ChannelID = None) -> RecvPayloadType:
+        '''Pop the next item from the queue.'''
+        msg = self.queue.get(channel_id=channel_id)
+        if msg.is_reply:
+            self.request_ctr.received_reply(msg.channel_id)
+        return msg
     
     #################### Low-level message handling ####################
     def _receive_and_handle_available_messages(self) -> None:
@@ -136,8 +143,6 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         '''Take appropriate action for message type. If data, add to queue.'''
         if msg.mtype is MessageType.DATA_PAYLOAD:
             self.queue.put(msg, msg.priority, msg.channel_id)
-            if msg.is_reply:
-                self.request_ctr.received_reply(msg.channel_id)
             
         elif msg.mtype is MessageType.ENCOUNTERED_ERROR:
             ex = msg.exception
