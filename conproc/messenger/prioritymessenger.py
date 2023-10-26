@@ -42,17 +42,21 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
 
     def send_request(self, data: SendPayloadType) -> None:
         '''Send data that does require replies.'''
-        self._send_message(DataMessage(data, request_reply=True, is_reply=False))
+        self.send_data_message(data, request_reply=True, is_reply=False)
         self.sent_requests += 1
         
     def send_reply(self, data: RecvPayloadType) -> None:
         '''Send data that acts as a reply to a request.'''
-        self._send_message(DataMessage(data, request_reply=False, is_reply=True))
+        self.send_data_message(data, request_reply=False, is_reply=True)
     
-    ############### Sending ###############
     def send_data_noreply(self, data: SendPayloadType) -> None:
         '''Send data that does not requre a reply.'''
-        self._send_message(DataMessage(data, request_reply=False, is_reply=False))
+        self.send_data_message(data, request_reply=False, is_reply=False)
+    
+    ############### Sending various message types ###############
+    def send_data_message(self, payload: SendPayloadType, request_reply: bool, is_reply: bool) -> None:
+        '''Send data message.'''
+        self._send_message(DataMessage(payload=payload, request_reply=request_reply, is_reply=is_reply))
         
     def send_close_request(self) -> None:
         '''Blocking send of close message to pipe.'''
@@ -60,8 +64,7 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     
     def send_error(self, exception: BaseException, print_trace: bool = True):
         '''Blocking send of close message to pipe.'''
-        #if print_trace:
-        traceback.print_exc() # it'd be better to do this on receive side
+        traceback.print_exc() # it'd be better to do this on receive side, but idk
         self._send_message(EncounteredErrorMessage(exception))
         
     def _send_message(self, msg: Message) -> None:
@@ -81,12 +84,12 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         return datas
     
     def receive_data(self, blocking: bool = True) -> RecvPayloadType:
-        '''Blocking receive of data from pipe.'''
-        return self._receive_message(blocking=blocking).payload
-        
-    def _receive_message(self, blocking: bool = True) -> DataMessage:
-        '''Return next data object from the pipe, handling other messages before.'''
-        msg: Message = self._receive_message_raw(blocking=blocking)
+        '''Receive payload of next data object.'''
+        return self.receive_data_message(blocking=blocking).payload
+    
+    def receive_data_message(self, blocking: bool = True) -> DataMessage:
+        '''Return the next data object after processing other message types.'''
+        msg: Message = self._receive_message(blocking=blocking)
         
         # handle message in different ways
         if msg.mtype is MessageType.DATA_PAYLOAD:
@@ -104,8 +107,8 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         else:
             raise MessageNotRecognizedError(f'Message of type {msg.mtype} not recognized.')
 
-    def _receive_message_raw(self, blocking: bool = True) -> Message:
-        '''Blocking receive of data from pipe to queue and return next item.'''
+    def _receive_message(self, blocking: bool) -> Message:
+        '''Receive all data and place into queue before returning next.'''
         while self.pipe.poll() or (self.queue.empty() and blocking):
             msg: Message = self._pipe_recv()
             self.queue.put(msg, msg.priority)
