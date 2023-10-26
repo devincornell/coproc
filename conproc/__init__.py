@@ -1,6 +1,5 @@
-from .baseprocess import *
+from .baseworkerprocess import *
 from .messenger import *
-from .workerprocess import *
 from .workerresource import *
 from .mapworker import *
 from .monitor import *

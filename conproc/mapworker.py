@@ -5,9 +5,9 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.context
 
-from .workerprocess import BaseWorkerProcess, SendPayloadType, RecvPayloadType
+from .baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
-from .messenger import ResourceRequestedClose, DataMessage
+from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType
 from .workerresource import WorkerResource
 from .messenger import PriorityMessenger
 
@@ -77,7 +77,7 @@ class MapMessengerInterface:
         
     def apply_async(self, target: typing.Callable, data: typing.Iterable[typing.Any]) -> typing.List[typing.Any]:
         self.messenger.send_data_noreply(UpdateUserFuncMessage(target))
-        self.messenger.request_multiple([DataMessage(d) for d in data])
+        self.messenger.send_request_multiple([DataMessage(d) for d in data])
         
     def receive(self) -> typing.Generator[RecvPayloadType]:
         for msg in self.messenger.receive_remaining():

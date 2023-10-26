@@ -11,7 +11,7 @@ import conproc
 def test_messenger():
         
     # attach the two messengers
-    pm, rm = conproc.get_messenger_pair()
+    pm, rm = conproc.PriorityMessenger.make_pair()
     assert(rm.remaining() == 0)
     assert(not pm.available())
     
@@ -26,7 +26,7 @@ def test_messenger():
     assert(rm.remaining() == 1)
     
     # send process -> resource
-    pm.reply_data(v)
+    pm.send_reply(v)
     assert(rm.available())
     assert(rm.remaining() == 1)
     assert(rm.receive_data() == v)
@@ -34,7 +34,7 @@ def test_messenger():
     assert(rm.remaining() == 0)
     
     # handle requests to close the pipe
-    rm.request_close()
+    rm.send_close_request()
     assert(rm.remaining() == 0) # not sure I care about this, but it does capture current behavior
     assert(pm.available())
     try:
@@ -44,7 +44,7 @@ def test_messenger():
         print(e)
     
     assert(not rm.available())
-    pm.reply_error(ValueError('test error was successful'))
+    pm.send_error(ValueError('test error was successful'))
     assert(rm.available())
     try:
         rm.receive_data()
@@ -61,7 +61,7 @@ def test_messenger():
         assert(pm.available())
         assert(pm.receive_data() == v)
     assert(not pm.available())
-    [pm.reply_data(v) for v in vs]
+    [pm.send_reply(v) for v in vs]
     assert(rm.available())
     assert(rm.remaining() == len(vs))
     for tv,v in zip(vs, rm.receive_remaining()):
@@ -130,7 +130,7 @@ def test_priority_messenger():
     assert(res_msngr.receive_data() == v)
     tester.test(False, False, 0, 0)
     
-    res_msngr.request_multiple(vs)
+    res_msngr.send_request_multiple(vs)
     print(res_msngr.remaining())
     tester.test(True, False, 0, len(vs))
     assert(proc_msngr.receive_available() == vs)
@@ -170,7 +170,7 @@ def test_priority_messenger():
     
     res_msngr.send_error(TestError('test error'))
     try:
-        proc_msngr.receive_message()
+        proc_msngr.receive_data()
         raise Exception('should not have gotten here')
     except TestError:
         pass

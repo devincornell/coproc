@@ -1,15 +1,18 @@
+
+import dataclasses
+
 import time
 import typing
 
 import sys
 sys.path.append('..')
-import concurrent
-import dataclasses
+import conproc
+
 
 def test_custom_process():
     print(f'============ starting mapworker =============')
     k = 0
-    with concurrent.MapWorker() as w:
+    with conproc.MapWorker() as w:
         w.apply_async(echo_test, range(10))
         for i in w.receive():
             print(f'{i=}')
@@ -20,9 +23,9 @@ def echo_test(v: typing.Any) -> typing.Any:
     print('echoing', v)
     return v
 
-def test_echo():
-    res = concurrent.WorkerResource(
-        worker_process_type = concurrent.SimpleWorkerProcess,
+def UNUSED():
+    res = conproc.WorkerResource(
+        worker_process_type = conproc.SimpleWorkerProcess,
     )
     res.start(worker_target=echo_test)
     res.messenger.request_multiple(range(10))
@@ -47,5 +50,5 @@ def test_echo():
     
 
 if __name__ == '__main__':
-    test_echo()
+    #test_echo()
     test_custom_process()

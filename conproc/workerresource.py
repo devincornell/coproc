@@ -5,7 +5,7 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.context
 
-from .workerprocess import BaseWorkerProcess
+from .baseworkerprocess import BaseWorkerProcess
 from .messenger import PriorityMessenger, SendPayloadType, RecvPayloadType
 
 class WorkerIsAlreadyAliveError(BaseException):
@@ -37,7 +37,7 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
         )
     
     ############### Dunder ###############
-    def __enter__(self) -> PriorityMessenger:
+    def __enter__(self) -> WorkerResource:
         '''Starts worker with no parameters and returns it.'''
         try:
             self.start()

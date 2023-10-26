@@ -3,15 +3,16 @@ import typing
 import queue
 import dataclasses
 
-import concurrent
+import sys
+sys.path.append('..')
+import conproc
 
 @dataclasses.dataclass(order=True)
 class Item:
     priority: int = 0
 
-
 def assert_devin(items: typing.List[Item]):
-    q = concurrent.PriorityQueue()
+    q = conproc.PriorityQueue()
     for i in items:
         q.put(i, i.priority)
     assert([q.get() for _ in range(q.size())] == list(sorted(items)))
