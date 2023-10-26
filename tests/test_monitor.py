@@ -19,15 +19,24 @@ def test_monitor():
     import os
     os.makedirs('tmp', exist_ok=True)
     
-    with conproc.Monitor(snapshot_seconds=0.01) as m:
+    monitor = conproc.Monitor(
+        snapshot_seconds=0.01,
+        fig_fname='tmp/test.png',
+        save_fig_freq=5,
+    )
+    
+    with monitor as m:
         a = list()
         for i in tqdm.tqdm(range(int(1e8))):
             i
             a.append(i)
-            if i > 0 and i % 10000 == 0:
-                if i % 1000000 == 0:
-                    m.add_note(f'Note {i}')
-                    m.save_stats_plot(f'tmp/test.png', verbose=False)
+            #if i > 0 and i % 10000 == 0:
+            if i % 10000000 == 0:
+                m.add_note(f'Note {i}')
+                print()
+                result = m.get_stats()
+                print(result.notes)
+                    #m.save_stats_plot(f'tmp/test.png', verbose=False)
                 #try:
                 #    result = m.get_stats()
                 #except BrokenPipeError as e:

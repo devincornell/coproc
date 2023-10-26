@@ -90,21 +90,26 @@ class MonitorWorkerProcess:
     include_children: bool
     snapshot_seconds: float
     messenger: PriorityMessenger
+    fig_fname: str
+    save_fig_freq: int
     processes: typing.List[psutil.Process] = dataclasses.field(default_factory=list)
     notes: typing.List[Note] = dataclasses.field(default_factory=list)
     stats: typing.List[Stat] = dataclasses.field(default_factory=list)
     verbose: bool = False
-    messages_received: int = 0
+    
     
     def __call__(self):
         '''Main event loop for the process.
         '''
         print(f'starting main loop')
+    
+        messages_received: int = 0
         
         self.stats.append(Stat.capture_window(
             process = self.root_process(), 
             capture_time = datetime.timedelta(seconds=self.snapshot_seconds),
         ))
+        last_mem: int = 0
         
         self.processes = self.get_processes()
         
@@ -118,9 +123,9 @@ class MonitorWorkerProcess:
                 exit()
             
             for msg in msgs:
-                if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
+                if self.verbose: print(f'recv [{messages_received}]-->>', msg)
                 if msg.mtype == MonitorMessageType.ADD_NOTE:
-                    self.notes.append(Note.now(self.root_process(), msg.note, self.stats[-1].memory_usage))
+                    self.notes.append(Note.now(self.root_process(), msg.note, last_mem))
                 elif msg.mtype == MonitorMessageType.REQUEST_STATS:
                     self.messenger.send_reply(
                         StatsDataMessage(self.stats_result())
@@ -131,10 +136,17 @@ class MonitorWorkerProcess:
                     raise NotImplementedError(f'unknown message type: {msg.mtype}')
                                 
             for p in self.processes:
-                self.stats.append(Stat.capture_window(
+                stat = Stat.capture_window(
                     process = p, 
                     capture_time = datetime.timedelta(seconds=self.snapshot_seconds)
-                ))
+                )
+                self.stats.append(stat)
+                if p.pid == self.pid:
+                    last_mem = stat.memory_usage
+                
+            if self.fig_fname is not None:
+                if len(self.stats) > 0 and len(self.stats) % self.save_fig_freq == 0:
+                    self.stats_result().save_stats_plot(self.fig_fname, verbose=False)
     
     def get_processes(self) -> typing.List[psutil.Process]:
         root_process = self.root_process()
