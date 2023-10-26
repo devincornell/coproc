@@ -1,9 +1,9 @@
 import typing
 import dataclasses
+import collections
 
 ItemType = typing.TypeVar('ItemType')
 
-import collections
 @dataclasses.dataclass
 class PriorityQueue:
     queues: typing.Dict[float, collections.deque[ItemType]] = dataclasses.field(default_factory=dict)
@@ -22,12 +22,9 @@ class PriorityQueue:
         # the queue will have at least one element
         if self.current_priority is None or priority < self.current_priority:
             self.current_priority = priority
-    
-    def get_all(self) -> typing.List[ItemType]:
-        '''Get all items in the queue, sorted by priority.'''
-        return [v for q in self.queues.values() for v in q]
-    
+        
     def get(self) -> ItemType:
+        '''Get next item in queue. Raises IndexError if empty.'''
         if self.current_priority is None:
             raise IndexError('Cannot pop from empty queue')
         cq = self.current_queue
@@ -35,7 +32,7 @@ class PriorityQueue:
         self.ct -= 1
         
         if not len(cq):
-            self.current_priority = self.get_lowest_priority()
+            self.current_priority = self._get_lowest_priority()
         
         return v
     
@@ -46,7 +43,7 @@ class PriorityQueue:
         except KeyError as e:
             raise IndexError('Cannot pop from empty queue') from e
         
-    def get_lowest_priority(self) -> typing.Optional[float]:
+    def _get_lowest_priority(self) -> typing.Optional[float]:
         '''Get the lowest priority queue that has items.'''
         for p,q in self.queues.items():
             if len(q):
