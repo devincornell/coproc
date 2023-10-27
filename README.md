@@ -1,10 +1,31 @@
-# concurrent
-Experimenting with some parallelization designs.
+# coproc
 
-Potentially feasible use cases:
+This module provides an building blocks for running stateful concurrent processes.
 
-1. Process monitoring from separate thread. 
-2. Loading pickle files in separate process. This makes it easier to clean up unused memory after reading a file.
-  + see [this](https://stackoverflow.com/questions/1316767/how-can-i-explicitly-free-memory-in-python/1316799#1316799) and [this](https://stackoverflow.com/questions/1316767/how-can-i-explicitly-free-memory-in-python/1316799#1316799)
-3. Manage database queries in separate process.
+
+
+These are the primary components:
+
++ `WorkerResource`: manage concurrent processes and the pipes they use to communicate. 
++ `PriorityMessenger`: handles multi-channel priority queue for communication between processes.
++ `Monitor`: higher-level concurrent process for monitoring and reporting on other processes.
++ `Pool`: emulates behavior of `multiprocessing.Pool` but with priority queue.
+
+
+```
+@dataclasses.dataclass
+class EchoProcess(coproc.BaseWorkerProcess):
+    '''Simply echoes back received data.'''
+    def __call__(self):
+        while True:
+            try:
+                data = self.messenger.receive_blocking()
+            except coproc.ResourceRequestedClose:
+                break
+            self.messenger.send_reply(data)
+
+with coproc.WorkerResource(EchoProcess) as worker:
+    worker.messenger.send_request('Hello, world!')
+    print(worker.messenger.receive_blocking())
+```
 
