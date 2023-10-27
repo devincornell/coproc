@@ -82,5 +82,5 @@ with coproc.Monitor(snapshot_seconds=0.01) as m:
 stats.get_stats_plot(font_size=10)
 ```
 
-
+![Monitor output example.](https://storage.googleapis.com/public_data_09324832787/monitor_ex1.png)
 
