@@ -7,35 +7,26 @@ import multiprocessing.context
 
 from .baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
-from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType
+from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger
 from .workerresource import WorkerResource
-from .messenger import PriorityMessenger
 
-# idk why
-import enum
-class MapMessageType(enum.Enum):
-    DATA = enum.auto()
-    UPDATE_USER_FUNC = enum.auto()
-    
-# kinda like an enum
-DATA = 1
-UPDATE_USER_FUNC = 2
+
+class MapMessage:
+    pass
 
 @dataclasses.dataclass
-class UpdateUserFuncMessage:
+class UpdateUserFuncMessage(MapMessage):
     '''Send generic data to the other end of the pipe, using priority of sent messsage.
     NOTE: this is designed to allow users to access benefits of user-defined queue.
     '''
     user_func: typing.Callable[[SendPayloadType], RecvPayloadType]
     priority: float = 0.0 # lower priority is more important
-    mtype: MapMessageType = MapMessageType.UPDATE_USER_FUNC
     
-@dataclasses.dataclass
-class DataMessage:
-    payload: SendPayloadType
+@dataclasses.dataclass(order=False)
+class MapDataMessage(MapMessage):
+    payload: SendPayloadType = dataclasses.field(compare=False)
+    order: int = 0
     priority: float = 0.0
-    mtype: MapMessageType = MapMessageType.DATA
-
 
 class WorkerTargetNotSetError(BaseException):
     pass
@@ -44,54 +35,77 @@ class WorkerTargetNotSetError(BaseException):
 class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPayloadType]):
     '''Simply receives data, processes it using worker_target, and sends the result back immediately.'''
     worker_target: typing.Callable[[SendPayloadType], RecvPayloadType] = None
-    messages_received: int = 0
     verbose: bool = False
+    
     def __call__(self):
-        '''Main event loop for the process.
-        '''
-        if self.verbose: print(f'starting main loop')
-        # main receive/send loop
+        pid = multiprocessing.current_process().pid
+        
+        if self.verbose: print(f'starting {pid}')
+        
         while True:
             try:
                 msg = self.messenger.receive_blocking()
+                if self.verbose: print(f'{pid} <<-- {msg}')
             except ResourceRequestedClose:
                 exit()
-            if self.verbose: print(f'recv [{self.messages_received}]-->>', msg)
-            self.messages_received += 1
-            if msg.mtype is MapMessageType.UPDATE_USER_FUNC:
+            
+            if isinstance(msg, UpdateUserFuncMessage):
                 self.worker_target = msg.user_func
-                if self.verbose: print('updated map function: ', self.worker_target)
-            else:
+                
+            elif isinstance(msg, MapDataMessage):
                 if self.worker_target is None:
-                    self.messenger.send_error(WorkerTargetNotSetError('worker target not set'))
+                    ex = WorkerTargetNotSetError('worker target not set. send '
+                        'UpdateUserFuncMessage first.')
+                    self.messenger.send_error(ex)
+                    
                 try:
-                    result = self.worker_target(msg)
-                    if self.verbose: print(f'send <<--', msg)
-                    self.messenger.send_reply(result)
-                except Exception as e:
+                    result = self.worker_target(msg.payload)
+                    dm = MapDataMessage(result, order=msg.order, priority=msg.priority)
+                    self.messenger.send_reply(dm)
+                    if self.verbose: print(f'{pid} -->> {result}')
+                                           
+                except BaseException as e:
                     self.messenger.send_error(e)
+                    if self.verbose: print(f'{pid} -->> {type(e)}')
+                    
+            else:
+                raise NotImplementedError(f'unknown message type: {msg}')
 
 @dataclasses.dataclass
-class MapMessengerInterface:
+class MapMessenger:
     messenger: PriorityMessenger
         
-    def apply_async(self, target: typing.Callable, data: typing.Iterable[typing.Any]) -> typing.List[typing.Any]:
-        self.messenger.send_norequest(UpdateUserFuncMessage(target))
-        self.messenger.send_request_multiple([DataMessage(d) for d in data])
+    def available(self) -> int:
+        return self.messenger.available()
+    
+    def remaining(self) -> int:
+        return self.messenger.remaining()
         
-    def receive(self) -> typing.Generator[RecvPayloadType]:
-        for msg in self.messenger.receive_remaining():
-            yield msg.payload
+    def receive(self) -> RecvPayloadType:
+        '''Receive a single data message.'''
+        return self.messenger.receive_blocking().payload
+        
+    def send(self, data: SendPayloadType):
+        '''Send a single data message.'''
+        self.messenger.send_request(MapDataMessage(data))
+        
+    def update_user_func(self, target: typing.Callable):
+        '''Update the user function that is called on each data message.'''
+        self.messenger.send_norequest(UpdateUserFuncMessage(target))
 
 class MapWorker:
-    def __init__(self):
+    def __init__(self, verbose: bool = False):
         self.res = WorkerResource(
             worker_process_type = MapWorkerProcess,
         )
+        self.start_kwargs = {
+            'verbose': verbose,
+        }
     def __enter__(self):
-        self.res.start()
-        return MapMessengerInterface(self.res.messenger)
+        self.res.start(**self.start_kwargs)
+        return MapMessenger(self.res.messenger)
+    
     def __exit__(self, *args):
-        #self.res.messenger.send_close_request()
         self.res.terminate(check_alive=False)
+
 
