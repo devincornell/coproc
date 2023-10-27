@@ -53,14 +53,14 @@ class Pool:
         remaining_to_send = 0
         
         # send initial data to get process started
-        print('send initial')
+        #print('send initial')
         for w in self.workers:
             i, d = next(data_iter)
-            print('initial_sending:', d)
+            #print('initial_sending:', d)
             w.messenger.send_request(MapDataMessage(d, i))
         
         # keep feeding until there is no more data to feed
-        print('feeder loop')
+        #print('feeder loop')
         finished = False
         while not finished:
             for w in self.workers:
@@ -68,7 +68,7 @@ class Pool:
                     try:
                         i, d = next(data_iter)
                         w.messenger.send_request(MapDataMessage(d, i))
-                        print('subsequent_sending:', d)
+                        #print('subsequent_sending:', d)
                         yield m
                     except StopIteration:
                         finished = True
@@ -79,7 +79,7 @@ class Pool:
                     break
                             
         # receive all remaining messages
-        print('wait on remaining')
+        #print('wait on remaining')
         for w in self:
             for m in w.messenger.receive_remaining():
                 yield m
