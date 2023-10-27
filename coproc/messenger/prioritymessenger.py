@@ -91,10 +91,10 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     #################### Receive all messages we are waiting on ####################
     def receive_remaining(self, channel_id: ChannelID = None) -> typing.Generator[RecvPayloadType]:
         '''Receive until the requested number of results have been received.'''
-        for m in self.receive_messages_remaining(channel_id=channel_id):
+        for m in self.receive_remaining_messages(channel_id=channel_id):
             yield m.payload
             
-    def receive_messages_remaining(self, channel_id: ChannelID = None) -> typing.Generator[DataMessage]:
+    def receive_remaining_messages(self, channel_id: ChannelID = None) -> typing.Generator[DataMessage]:
         while self.remaining(channel_id) > 0:
             yield self.receive_message_blocking(channel_id=channel_id)
     
