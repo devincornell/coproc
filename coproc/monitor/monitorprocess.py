@@ -100,9 +100,7 @@ class MonitorWorkerProcess:
     
     def __call__(self):
         '''Main event loop for the process.
-        '''
-        print(f'starting main loop')
-    
+        '''    
         messages_received: int = 0
         
         self.stats.append(Stat.capture_window(
