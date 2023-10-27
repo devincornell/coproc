@@ -1,6 +1,8 @@
-# coproc
+# CoProc Python Package
 
-This module provides an building blocks for running stateful concurrent processes.
+`pip install --upgrade git+https://github.com/devincornell/coproc.git@main`
+
+This module provides building blocks for running stateful concurrent processes.
 
 For an introduction, see examples/introduction.ipynb.
 
