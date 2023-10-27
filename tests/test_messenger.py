@@ -5,13 +5,13 @@ import json
 
 import sys
 sys.path.append('..')
-import conproc
+import coproc
 
 #import pydevin
 def test_messenger():
         
     # attach the two messengers
-    pm, rm = conproc.PriorityMessenger.new_pair()
+    pm, rm = coproc.PriorityMessenger.new_pair()
     assert(rm.remaining() == 0)
     assert(not pm.available())
     
@@ -40,7 +40,7 @@ def test_messenger():
         assert(pm.available())
         pm.receive_blocking()
         raise Exception('should not have gotten here')
-    except conproc.ResourceRequestedClose as e:
+    except coproc.ResourceRequestedClose as e:
         print(e)
     
     assert(not rm.available())
@@ -89,8 +89,8 @@ class TestClassLesser:
     
 @dataclasses.dataclass
 class MessengerTester:
-    proc_msngr: conproc.PriorityMessenger
-    res_msngr: conproc.PriorityMessenger
+    proc_msngr: coproc.PriorityMessenger
+    res_msngr: coproc.PriorityMessenger
     
     def test(self, proc_available: int, res_available: int, proc_remaining: int, res_remaining: int):
         try:
@@ -111,7 +111,7 @@ class TestError(BaseException):
     pass
 
 def test_priority_messenger():
-    proc_msngr, res_msngr = conproc.PriorityMessenger.new_pair()
+    proc_msngr, res_msngr = coproc.PriorityMessenger.new_pair()
     tester = MessengerTester(proc_msngr, res_msngr)
     v = 1
     vs = [1, 2, 3]
@@ -175,7 +175,7 @@ def test_priority_messenger():
     try:
         proc_msngr.available()
         raise Exception('should not have gotten here')
-    except conproc.ResourceRequestedClose:
+    except coproc.ResourceRequestedClose:
         print('passed error test')
     
     tester.test(0, 0, 0, 0)

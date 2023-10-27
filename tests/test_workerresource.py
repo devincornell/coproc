@@ -6,13 +6,13 @@ import typing
 
 import sys
 sys.path.append('..')
-import conproc
+import coproc
 
 
 def test_custom_process():
     print(f'============ starting mapworker =============')
     k = 0
-    with conproc.MapWorker() as w:
+    with coproc.MapWorker() as w:
         w.apply_async(echo_test, range(10))
         for i in w.receive():
             print(f'{i=}')
@@ -24,8 +24,8 @@ def echo_test(v: typing.Any) -> typing.Any:
     return v
 
 def UNUSED():
-    res = conproc.WorkerResource(
-        worker_process_type = conproc.SimpleWorkerProcess,
+    res = coproc.WorkerResource(
+        worker_process_type = coproc.SimpleWorkerProcess,
     )
     res.start(worker_target=echo_test)
     res.messenger.request_multiple(range(10))
@@ -51,7 +51,7 @@ def UNUSED():
     
 import os
 
-class EchoProcess(conproc.BaseWorkerProcess):
+class EchoProcess(coproc.BaseWorkerProcess):
     '''Process that sends back the same data it receives.'''
     
     def __call__(self):
@@ -69,7 +69,7 @@ import time
 
 def test_workerresource_basic():
     
-    with conproc.WorkerResource(EchoProcess) as w:
+    with coproc.WorkerResource(EchoProcess) as w:
         v = 'Hello, world!'
         w.messenger.send_norequest(v)
         assert(v == w.messenger.receive_blocking())

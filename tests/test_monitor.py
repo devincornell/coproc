@@ -3,7 +3,7 @@ import typing
 
 import sys
 sys.path.append('..')
-import conproc
+import coproc
 
 import dataclasses 
 
@@ -19,7 +19,7 @@ def test_monitor():
     import os
     os.makedirs('tmp', exist_ok=True)
     
-    monitor = conproc.Monitor(
+    monitor = coproc.Monitor(
         snapshot_seconds=0.01,
         fig_fname='tmp/test.png',
         save_fig_freq=5,

@@ -5,14 +5,14 @@ import dataclasses
 
 import sys
 sys.path.append('..')
-import conproc
+import coproc
 
 @dataclasses.dataclass(order=True)
 class Item:
     priority: int = 0
 
 def assert_devin(items: typing.List[Item]):
-    q = conproc.PriorityQueue()
+    q = coproc.PriorityQueue()
     for i in items:
         q.put(i, i.priority)
     assert([q.get() for _ in range(q.size())] == list(sorted(items)))
@@ -32,7 +32,7 @@ def test_multi():
     test3 = [Item(j) for i in range(100) for j in [i]*10]
     tests = [test1, test2, test3]
     
-    mpq = conproc.PriorityMultiQueue()
+    mpq = coproc.PriorityMultiQueue()
     for i, ts in enumerate(tests):
         for t in ts:
             mpq.put(t, t.priority, i)
