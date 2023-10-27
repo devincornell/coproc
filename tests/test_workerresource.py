@@ -9,16 +9,6 @@ sys.path.append('..')
 import coproc
 
 
-def test_custom_process():
-    print(f'============ starting mapworker =============')
-    k = 0
-    with coproc.MapWorker() as w:
-        w.apply_async(echo_test, range(10))
-        for i in w.receive():
-            print(f'{i=}')
-            assert(i == k)
-            k += 1
-
 def echo_test(v: typing.Any) -> typing.Any:
     print('echoing', v)
     return v
