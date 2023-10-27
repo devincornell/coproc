@@ -46,7 +46,7 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
         return self
     
     def __exit__(self, *args):
-        self.terminate()
+        self.terminate(check_alive=False)
             
     ############### Message Queue Functionality ###############
     # NOTE: all of these methods were used - access messenger directly to send/receive
