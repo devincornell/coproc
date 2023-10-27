@@ -1,4 +1,28 @@
 
+######################## Building ########################
+
+PACKAGE_NAME = coproc
+PACKAGE_FOLDER = $(PACKAGE_NAME)/
+build:
+	# install latest version of compiler software
+	pip install --user --upgrade setuptools wheel
+	
+	# actually set up package
+	python setup.py sdist bdist_wheel
+	
+	git add setup.cfg setup.py LICENSE README.md
+
+reinstall:
+	pip uninstall -y coproc
+	pip install .
+
+uninstall:
+	pip uninstall -y coproc
+
+install:
+	pip install .
+
+######################## Testing ########################
 uninstall:
 	pip uninstall -y conproc
 
