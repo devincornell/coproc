@@ -9,101 +9,73 @@ import multiprocessing.context
 #from .baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
 #from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger
-from .messenger import PriorityMessenger, MultiMessenger
-from .workerresource import WorkerResource
-from .mapworker import MapWorkerProcess, MapDataMessage, UpdateUserFuncMessage, SendPayloadType, RecvPayloadType
+from .messenger import PriorityMessenger, MultiMessenger, ChannelID, SendPayloadType, RecvPayloadType
+#from .workerresource import WorkerResource
+#from .baseworkerprocess import BaseWorkerProcess
+from .mapworker import MapWorkerProcess, SliceMessage, MapResultMessage
+from .workerresourcepool import WorkerResourcePool    
 
-class Pool:
-    def __init__(self, n: int, verbose: bool = False, messenger_type: typing.Type[PriorityMessenger] = PriorityMessenger):
-        self.workers = list()
-        for _ in range(n):
-            w = WorkerResource(
-                worker_process_type = MapWorkerProcess,
-                messenger_type=messenger_type,
-            )
-            self.workers.append(w)
-        
+
+class Pool(typing.Generic[SendPayloadType, RecvPayloadType]):
+    def __init__(self, n: int, verbose: bool = False):
+        self.pool = WorkerResourcePool.new(n, MapWorkerProcess, MultiMessenger)
         self.start_kwargs = {
             'verbose': verbose,
         }
         
     def __enter__(self) -> Pool:
-        self.start()
+        #self.start() #NOTE: instead, this should start when a map function is called
         return self
     
     def __exit__(self, *args):
-        self.terminate(check_alive=False)
+        #self.pool.terminate(check_alive=False)
+        pass
             
     def __iter__(self):
-        return iter(self.workers)
+        return iter(self.pool)
     
-    ################### Mapping ###################
-    def map(self, func: typing.Callable[[SendPayloadType], RecvPayloadType], datas: typing.List[SendPayloadType]) -> typing.Iterable[RecvPayloadType]:
+    ################### New Mapping ###################
+    def map(self, 
+        func: typing.Callable[[SendPayloadType], RecvPayloadType], 
+        datas: typing.List[SendPayloadType], 
+        chunksize: int = 1
+    ) -> typing.List[RecvPayloadType]:
+        return [r for m in sorted(self.map_unordered(func, datas, chunksize=chunksize)) for m in m.results]
+    
+    def map_unordered(self, 
+        func: typing.Callable[[SendPayloadType], RecvPayloadType], 
+        datas: typing.List[SendPayloadType], 
+        chunksize: int = 1,
+        channel_id: ChannelID = None,
+    ) -> typing.Generator[RecvPayloadType]:
         '''Get results in order as a list.'''
-        return [m.payload for m in sorted(self._map_messages(func, datas), key=lambda m: m.order)]
-    
-    def map_unordered(self, func: typing.Callable[[SendPayloadType], RecvPayloadType], datas: typing.Iterable[SendPayloadType]) -> typing.Iterable[RecvPayloadType]:
-        '''Return results as they become available.'''
-        return (m.payload for m in self._map_messages(func, datas))
-    
-    def _map_messages(self, func: typing.Callable[[SendPayloadType], RecvPayloadType], datas: typing.Iterable[SendPayloadType]) -> typing.Generator[MapDataMessage]:
-        '''Most general map function - returns unordered list of result messages.'''
-        self.update_user_func(func)
+        map_results = list(self._map_base(func, datas, chunksize=chunksize))
         
-        # get remaining data to submit
-        data_iter = enumerate(datas)
-        remaining_to_send = 0
-        
-        # send initial data to get process started
-        #print('send initial')
-        for w in self.workers:
-            i, d = next(data_iter)
-            #print('initial_sending:', d)
-            w.messenger.send_request(MapDataMessage(d, i))
-        
-        # keep feeding until there is no more data to feed
-        #print('feeder loop')
-        finished = False
-        while not finished:
-            for w in self.workers:
-                for m in w.messenger.receive_available():
-                    try:
-                        i, d = next(data_iter)
-                        w.messenger.send_request(MapDataMessage(d, i))
-                        #print('subsequent_sending:', d)
-                        yield m
-                    except StopIteration:
-                        finished = True
-                        yield m
-                        break
-                
-                if finished:
-                    break
-                            
-        # receive all remaining messages
-        #print('wait on remaining')
-        for w in self:
-            for m in w.messenger.receive_remaining():
-                yield m
+        for mrm in self._map_base(func, slices, chunksize=chunksize, channel_id=channel_id):
+            for r in mrm.results:
+                yield r
     
-    def update_user_func(self, target: typing.Callable[[SendPayloadType], RecvPayloadType]):
-        '''Update the user function that is called on each data message.'''
-        self._apply_to_workers(lambda w: w.messenger.send_norequest(UpdateUserFuncMessage(target)))
+    def _map_base(self, 
+        func: typing.Callable[[SendPayloadType], RecvPayloadType], 
+        datas: typing.List[SendPayloadType], 
+        chunksize: int = 1,
+        channel_id: ChannelID = None,
+    ) -> typing.Generator[MapResultMessage]:
+        '''Initialize worker targets, create data slices, and '''
+        self.pool.set_start_kwargs(
+            worker_target=func, 
+            items=datas, 
+            **self.start_kwargs
+        )
+        slices = iter([SliceMessage(s) for s in self.chunk_size_slice(len(datas), chunksize)])
+        with self.pool as pool:
+            for mrm in pool._map_messages(func, slices, channel_id=channel_id):
+                yield mrm
     
-    ################### Stopping and starting ###################
-    def start(self, **kwargs):
-        self._apply_to_workers(lambda w: w.start(**{**self.start_kwargs, **kwargs}))
+    @staticmethod
+    def chunk_size_slice(n: int, chunk_size: int) -> typing.List[Iterable]:
+        '''Break elements into chunks of size chunk_size.
+        '''
+        num_chunks = n // chunk_size + (1 if (n % chunk_size) > 0 else 0)
+        return [slice(*slice(i*chunk_size, (i+1)*chunk_size).indices(n)) for i in range(num_chunks)]
     
-    def join(self):
-        self._apply_to_workers(lambda w: w.messenger.send_close_request())
-        self._apply_to_workers(lambda w: w.join())
-        
-    def terminate(self, check_alive: bool = True):
-        self._apply_to_workers(lambda w: w.terminate(check_alive=check_alive))
-
-    ################### manipulating workers ###################
-    def _apply_to_workers(self, func: typing.Callable[[WorkerResource]]):
-        return [func(w) for w in self.workers]
-
-
-
