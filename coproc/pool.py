@@ -9,15 +9,17 @@ import multiprocessing.context
 #from .baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
 #from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger
+from .messenger import PriorityMessenger, MultiMessenger
 from .workerresource import WorkerResource
 from .mapworker import MapWorkerProcess, MapDataMessage, UpdateUserFuncMessage, SendPayloadType, RecvPayloadType
 
 class Pool:
-    def __init__(self, n: int, verbose: bool = False):
+    def __init__(self, n: int, verbose: bool = False, messenger_type: typing.Type[PriorityMessenger] = PriorityMessenger):
         self.workers = list()
         for _ in range(n):
             w = WorkerResource(
                 worker_process_type = MapWorkerProcess,
+                messenger_type=messenger_type,
             )
             self.workers.append(w)
         
