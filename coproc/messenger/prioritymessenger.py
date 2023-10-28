@@ -9,7 +9,7 @@ import traceback
 from .messages import SendPayloadType, RecvPayloadType, Message, MessageType, DataMessage, EncounteredErrorMessage, CloseRequestMessage
 from .exceptions import ResourceRequestedClose, MessageNotRecognizedError
 #from .priorityqueue import PriorityQueue
-from .prioritymultiqueue import PriorityMultiQueue, ChannelID
+from .queue import PriorityMultiQueue, ChannelID
 
 import collections
 

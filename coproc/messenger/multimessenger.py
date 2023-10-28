@@ -4,8 +4,7 @@ import typing
 import multiprocessing
 
 from .prioritymessenger import PriorityMessenger
-from .multiqueue import MultiQueue
-from .prioritymultiqueue import PriorityMultiQueue
+from .queue import MultiQueue, PriorityMultiQueue
 from .messages import Message
 
 @dataclasses.dataclass
