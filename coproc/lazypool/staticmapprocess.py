@@ -5,24 +5,27 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.context
 
-from .baseworkerprocess import BaseWorkerProcess
+from ..baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
-from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger, MultiMessenger
+from ..messenger import ResourceRequestedClose, SendPayloadType, RecvPayloadType
 #from .messenger import PriorityMessenger, MultiMessenger
-from .workerresource import WorkerResource
 
 @dataclasses.dataclass
 class SliceMessage:
     ind: slice
     
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class MapResultMessage:
     ind: slice
-    results: SendPayloadType = dataclasses.field(compare=False)
+    results: SendPayloadType
+    
+    @property
+    def start(self):
+        return self.ind.start
 
 @dataclasses.dataclass
-class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPayloadType]):
-    '''Simply receives data, processes it using worker_target, and sends the result back immediately.'''
+class StaticMapProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPayloadType]):
+    '''Stores items at init and receives slice messages .'''
     worker_target: typing.Callable[[SendPayloadType], RecvPayloadType]
     items: typing.List[SendPayloadType]
     verbose: bool = False
@@ -34,19 +37,19 @@ class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPa
         while True:
             try:
                 slice_msg: SliceMessage = self.messenger.receive_blocking()
-                if self.verbose: print(f'{pid} <<-- {msg}')
+                if self.verbose: print(f'{pid} <<-- {slice_msg}')
             except ResourceRequestedClose:
                 break
                 
             try:
                 # apply map func to each element
                 results = list()
-                for item in items[slice_msg.ind]:
+                for item in self.items[slice_msg.ind]:
                     results.append(self.worker_target(item))
                     
                 # return results chunk
                 self.messenger.send_reply(MapResultMessage(slice_msg.ind, results))
-                if self.verbose: print(f'{pid} -->> {result}')
+                if self.verbose: print(f'{pid} -->> {results}')
                                         
             except BaseException as e:
                 self.messenger.send_error(e)

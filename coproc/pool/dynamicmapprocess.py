@@ -5,10 +5,10 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.context
 
-from .baseworkerprocess import BaseWorkerProcess
+from ..baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
-from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger
-from .workerresource import WorkerResource
+from ..messenger import ResourceRequestedClose, SendPayloadType, RecvPayloadType, PriorityMessenger
+from ..workerresource import WorkerResource
 
 
 class MapMessage:
@@ -32,7 +32,7 @@ class WorkerTargetNotSetError(BaseException):
     pass
 
 @dataclasses.dataclass
-class MapWorkerProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPayloadType]):
+class DynamicMapProcess(BaseWorkerProcess, typing.Generic[SendPayloadType, RecvPayloadType]):
     '''Simply receives data, processes it using worker_target, and sends the result back immediately.'''
     worker_target: typing.Callable[[SendPayloadType], RecvPayloadType] = None
     verbose: bool = False

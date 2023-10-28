@@ -58,6 +58,11 @@ class WorkerResourcePool:
         
     def is_alive(self) -> bool:
         return all(self.apply_to_workers(lambda w: w.is_alive()))
+    
+    def wait_until_dead(self):
+        '''Wait until all workers are dead.'''
+        while self.is_alive():
+            pass
 
     ################### manipulating workers ###################
     def apply_to_workers(self, func: typing.Callable[[WorkerResource]]):

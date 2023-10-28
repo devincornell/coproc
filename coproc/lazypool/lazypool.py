@@ -9,16 +9,15 @@ import multiprocessing.context
 #from .baseworkerprocess import BaseWorkerProcess
 #from .messenger import PriorityMessenger
 #from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger
-from .messenger import PriorityMessenger, MultiMessenger, ChannelID, SendPayloadType, RecvPayloadType
+from ..messenger import MultiMessenger, ChannelID, SendPayloadType, RecvPayloadType
 #from .workerresource import WorkerResource
 #from .baseworkerprocess import BaseWorkerProcess
-from .mapworker import MapWorkerProcess, SliceMessage, MapResultMessage
-from .workerresourcepool import WorkerResourcePool    
+from .staticmapprocess import StaticMapProcess, SliceMessage, MapResultMessage
+from ..workerresourcepool import WorkerResourcePool
 
-
-class Pool(typing.Generic[SendPayloadType, RecvPayloadType]):
+class LazyPool(typing.Generic[SendPayloadType, RecvPayloadType]):
     def __init__(self, n: int, verbose: bool = False):
-        self.pool = WorkerResourcePool.new(n, MapWorkerProcess, MultiMessenger)
+        self.pool = WorkerResourcePool.new(n, StaticMapProcess, MultiMessenger)
         self.start_kwargs = {
             'verbose': verbose,
         }
@@ -38,9 +37,12 @@ class Pool(typing.Generic[SendPayloadType, RecvPayloadType]):
     def map(self, 
         func: typing.Callable[[SendPayloadType], RecvPayloadType], 
         datas: typing.List[SendPayloadType], 
-        chunksize: int = 1
+        chunksize: int = 1,
+        channel_id: ChannelID = None,
     ) -> typing.List[RecvPayloadType]:
-        return [r for m in sorted(self.map_unordered(func, datas, chunksize=chunksize)) for m in m.results]
+        '''Get results in order as a list.'''
+        unordered_iter = self._map_base(func, datas, chunksize=chunksize, channel_id=channel_id)
+        return [r for m in sorted(unordered_iter, key=lambda x: x.start) for r in m.results]
     
     def map_unordered(self, 
         func: typing.Callable[[SendPayloadType], RecvPayloadType], 
@@ -48,10 +50,9 @@ class Pool(typing.Generic[SendPayloadType, RecvPayloadType]):
         chunksize: int = 1,
         channel_id: ChannelID = None,
     ) -> typing.Generator[RecvPayloadType]:
-        '''Get results in order as a list.'''
-        map_results = list(self._map_base(func, datas, chunksize=chunksize))
-        
-        for mrm in self._map_base(func, slices, chunksize=chunksize, channel_id=channel_id):
+        '''Get results as they are returned by the worker processes.'''
+        unordered_iter = self._map_base(func, datas, chunksize=chunksize, channel_id=channel_id)
+        for mrm in unordered_iter:
             for r in mrm.results:
                 yield r
     
@@ -69,7 +70,7 @@ class Pool(typing.Generic[SendPayloadType, RecvPayloadType]):
         )
         slices = iter([SliceMessage(s) for s in self.chunk_size_slice(len(datas), chunksize)])
         with self.pool as pool:
-            for mrm in pool._map_messages(func, slices, channel_id=channel_id):
+            for mrm in pool.map_messages(slices, channel_id=channel_id):
                 yield mrm
     
     @staticmethod
@@ -79,3 +80,8 @@ class Pool(typing.Generic[SendPayloadType, RecvPayloadType]):
         num_chunks = n // chunk_size + (1 if (n % chunk_size) > 0 else 0)
         return [slice(*slice(i*chunk_size, (i+1)*chunk_size).indices(n)) for i in range(num_chunks)]
     
+    def wait_until_dead(self):
+        self.pool.wait_until_dead()
+    
+    def is_alive(self) -> bool:
+        return self.pool.is_alive()
