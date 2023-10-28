@@ -143,7 +143,7 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     def _handle_message(self, msg: Message):
         '''Take appropriate action for message type. If data, add to queue.'''
         if msg.mtype is MessageType.DATA_PAYLOAD:
-            self.queue.put(msg, msg.priority, msg.channel_id)
+            self._queue_put(msg)
             
         elif msg.mtype is MessageType.ENCOUNTERED_ERROR:
             ex = msg.exception
@@ -155,6 +155,10 @@ class PriorityMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
             raise ResourceRequestedClose(f'Resource requested that this process close.')
         else:
             raise MessageNotRecognizedError(f'Message of type {msg.mtype} not recognized.')
+        
+    def _queue_put(self, msg: Message) -> None:
+        '''Put message into queue.'''
+        self.queue.put(msg, msg.priority, msg.channel_id)
 
     def _pipe_recv(self) -> Message:
         '''Receive data from pipe.'''

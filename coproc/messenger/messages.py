@@ -14,7 +14,7 @@ RecvPayloadType = typing.TypeVar('RecvPayloadType')
 class Message:
     '''Base class for messages containing priority comparisons.'''
     priority: float
-    #channel_id: ChannelID
+    channel_id: ChannelID
     
     # comparators were for builtin queue.PriorityQueue, 
     #   but not needed for my custom implementations

@@ -22,6 +22,7 @@ class WorkerIsDeadError(BaseException):
 class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     '''Simplest worker resource.'''
     worker_process_type: typing.Type[BaseWorkerProcess]
+    messenger_type: typing.Type[PriorityMessenger] = PriorityMessenger
     method: typing.Optional[typing.Literal['forkserver', 'spawn', 'fork']] = None
     _proc: typing.Optional[multiprocessing.Process] = None
     _messenger: typing.Optional[PriorityMessenger] = None
@@ -111,7 +112,7 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     ) -> typing.Tuple[PriorityMessenger, multiprocessing.context.ForkServerContext]:
         '''Get a messenger, process pair. Best to refresh the whole thing.'''
         ctx: multiprocessing.context.ForkServerContext = multiprocessing.get_context(method=self.method)
-        process_messenger, resource_messenger = PriorityMessenger.new_pair()
+        process_messenger, resource_messenger = self.messenger_type.new_pair()
         target = self.worker_process_type(
             messenger = process_messenger, 
             **worker_kwargs,
