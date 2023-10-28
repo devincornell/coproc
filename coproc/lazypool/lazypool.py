@@ -72,6 +72,7 @@ class LazyPool(typing.Generic[SendPayloadType, RecvPayloadType]):
         with self.pool as pool:
             for mrm in pool.map_messages(slices, channel_id=channel_id):
                 yield mrm
+        self.wait_until_dead()
     
     @staticmethod
     def chunk_size_slice(n: int, chunk_size: int) -> typing.List[Iterable]:

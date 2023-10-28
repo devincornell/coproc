@@ -65,7 +65,7 @@ class WorkerResourcePool:
             pass
 
     ################### manipulating workers ###################
-    def apply_to_workers(self, func: typing.Callable[[WorkerResource]]):
+    def apply_to_workers(self, func: typing.Callable[[WorkerResource], typing.Any]):
         return [func(w) for w in self.workers]
     
     ################### message sending/receiving ###################

@@ -58,7 +58,7 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
         '''Get process id from worker.'''
         return self.proc.pid
         
-    def start(self, **worker_kwargs,):
+    def start(self, **worker_kwargs):
         '''Start the process, throws WorkerIsAliveError if already alive.'''
         if self.is_alive():
             raise WorkerIsAlreadyAliveError(f'Worker {self.pid} cannot be started because it is already alive.')

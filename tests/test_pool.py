@@ -31,9 +31,8 @@ def test_lazy_pool():
     
     print('unordered')
     vsq = set(v**2 for v in vs)
-    for r in p.map_unordered(wait_square, vs):
-        assert(r in vsq)
-        print(r)
+    results = set(p.map_unordered(wait_square, vs))
+    assert(vsq == results)
 
 if __name__ == '__main__':
     test_lazy_pool()
