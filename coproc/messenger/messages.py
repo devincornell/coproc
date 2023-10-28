@@ -2,7 +2,7 @@ from __future__ import annotations
 import typing
 import dataclasses
 import enum
-from .prioritymultiqueue import ChannelID
+from .queue import ChannelID
 
 SendPayloadType = typing.TypeVar('SendPayloadType')
 RecvPayloadType = typing.TypeVar('RecvPayloadType')
@@ -14,6 +14,7 @@ RecvPayloadType = typing.TypeVar('RecvPayloadType')
 class Message:
     '''Base class for messages containing priority comparisons.'''
     priority: float
+    mtype: MessageType
     channel_id: ChannelID
     
     # comparators were for builtin queue.PriorityQueue, 
