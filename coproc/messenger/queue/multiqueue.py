@@ -1,16 +1,16 @@
-import typing
 import dataclasses
 import collections
+import typing
 
-from .priorityqueue import PriorityQueue, ItemType
+from .basicqueue import BasicQueue, ItemType
 
 class ChannelID(typing.Hashable):
     pass
 
 @dataclasses.dataclass
-class PriorityMultiQueue(typing.Generic[ItemType]):
-    '''Wraps multiple queues that each handle separate channels.'''
-    pqueues: typing.Dict[typing.Hashable, PriorityQueue[ItemType]] = dataclasses.field(default_factory=dict)
+class MultiQueue(typing.Generic[ItemType]):
+    '''Similar to priority messenger, but does not include priority.'''
+    queues: typing.Dict[typing.Hashable, BasicQueue[ItemType]] = dataclasses.field(default_factory=dict)
     
     ############## Basic Put/Get ##############
     def get(self, channel_id: ChannelID) -> ItemType:
@@ -20,14 +20,14 @@ class PriorityMultiQueue(typing.Generic[ItemType]):
         except KeyError as e:
             raise IndexError('Cannot pop from empty queue') from e
     
-    def put(self, item: ItemType, priority: float, channel_id: ChannelID):
+    def put(self, item: ItemType, channel_id: ChannelID):
         '''Put a new item on the queue.'''
-        self.pqueues.setdefault(channel_id, PriorityQueue())
-        return self[channel_id].put(item, priority)
+        self.queues.setdefault(channel_id, BasicQueue())
+        return self[channel_id].put(item)
         
     ############## check size and whether empty ##############
     def empty(self, channel_id: ChannelID) -> bool:
-        return channel_id not in self.pqueues or self[channel_id].empty()
+        return channel_id not in self.queues or self[channel_id].empty()
     
     def size(self, channel_id: ChannelID) -> int:
         try:
@@ -36,10 +36,15 @@ class PriorityMultiQueue(typing.Generic[ItemType]):
             return 0
     
     ############## dunder ##############
-    def __getitem__(self, channel_id: ChannelID) -> PriorityQueue[ItemType]:
+    def __getitem__(self, channel_id: ChannelID) -> BasicQueue[ItemType]:
         '''Get corresponding piority queue.'''
-        return self.pqueues[channel_id]
+        return self.queues[channel_id]
         
     def __contains__(self, channel_id: ChannelID) -> bool:
         '''Check if the channel currently exists in the dict.'''
-        return channel_id in self.pqueues
+        return channel_id in self.queues
+
+
+
+
+
