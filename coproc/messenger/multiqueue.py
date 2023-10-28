@@ -3,20 +3,21 @@ import collections
 import typing
 
 from .messages import Message
-from .prioritymessenger import PriorityMessenger
+#from .prioritymessenger import PriorityMessenger, ChannelID
+from .prioritymultiqueue import PriorityMultiQueue, ChannelID
 
 ItemType = typing.TypeVar('ItemType')
 
 @dataclasses.dataclass
-class BasicQueue:
+class BasicQueue(typing.Generic[ItemType]):
     '''Wrapper for collections.dequeue'''
-    queue: collections.deque = collections.deque()
+    queue: collections.deque[ItemType] = dataclasses.field(default_factory=collections.deque)
     
-    def get(self) -> Message:
+    def get(self) -> ItemType:
         # NOTE: need to benchmark popleft vs appendleft
         return self.queue.popleft()
     
-    def put(self, item: Message):
+    def put(self, item: ItemType):
         self.queue.append(item)
         
     def empty(self) -> bool:
@@ -25,8 +26,8 @@ class BasicQueue:
     def size(self) -> int:
         return len(self.queue)
 
-
-class MultiQueue(PriorityMessenger):
+@dataclasses.dataclass
+class MultiQueue(PriorityMultiQueue, typing.Generic[ItemType]):
     '''Similar to priority messenger, but does not include priority.'''
     queues: typing.Dict[typing.Hashable, BasicQueue[ItemType]] = dataclasses.field(default_factory=dict)
     

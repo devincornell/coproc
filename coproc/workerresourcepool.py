@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typing
+import dataclasses
 
 from .workerresource import WorkerResource
 from .messenger import PriorityMessenger, SendPayloadType, RecvPayloadType, ChannelID
