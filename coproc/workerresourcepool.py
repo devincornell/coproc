@@ -55,17 +55,20 @@ class WorkerResourcePool:
         
     def terminate(self, check_alive: bool = True):
         self.apply_to_workers(lambda w: w.terminate(check_alive=check_alive))
+        
+    def is_alive(self) -> bool:
+        return all(self.apply_to_workers(lambda w: w.is_alive()))
 
     ################### manipulating workers ###################
     def apply_to_workers(self, func: typing.Callable[[WorkerResource]]):
         return [func(w) for w in self.workers]
     
-    def _map_messages(self, 
-        func: typing.Callable[[SendPayloadType], RecvPayloadType], 
+    ################### message sending/receiving ###################
+    def map_messages(self, 
         data_iter: typing.Iterable[SendPayloadType],
         channel_id: ChannelID = None,
     ) -> typing.Generator[RecvPayloadType]:
-        '''Send data, as iterable, to workers and return results as they become available.'''
+        '''Feed data_iter to workers and receive results as soon as they are done.'''
         # send initial data to get process started
         #print('send initial')
         for w in self.workers:
