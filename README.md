@@ -14,6 +14,8 @@ These are the primary components:
 + `Pool`: emulates behavior of `multiprocessing.Pool` but with priority queue.
 
 
+![Explanatory diagram.](img/coproc_diagram2.svg)
+
 ### `WorkerResource` and `PriorityMessenger` Examples
 
 Use `WorkerResource` to manage a single concurrent process. In this example, `EchoProcess` simply echoes back received data.
