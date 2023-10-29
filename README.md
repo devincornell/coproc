@@ -14,7 +14,7 @@ These are the primary components:
 + `Pool`: emulates behavior of `multiprocessing.Pool` but with priority queue.
 
 
-![Explanatory diagram.](img/coproc_diagram2.svg)
+![Explanatory diagram.](https://storage.googleapis.com/public_data_09324832787/coproc_diagram2.svg)
 
 ### `WorkerResource` and `PriorityMessenger` Examples
 
