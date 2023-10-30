@@ -45,7 +45,7 @@ def test_monitor_process():
                 l = list()
 
         stats = m.get_stats()
-    stats.plot_memory(font_size=5)
+    stats.save_memory_plot('tmp/test_parallel.png', font_size=8)
 
 def test_monitor_simple():
         

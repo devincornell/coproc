@@ -83,14 +83,35 @@ with EchoResource(verbose=True) as w:
 ### `Monitor` Examples
 
 ```
-import time
-with coproc.Monitor(snapshot_seconds=0.01) as m:
-    for _ in range(10):
-        m.add_note('hi')
-        time.sleep(0.1)
+import multiprocessing
+import tqdm
+
+monitor = coproc.Monitor(
+    snapshot_seconds=0.01, 
+    fig_path='tmp/test_parallel.png',
+    log_path='tmp/test_parallel.log'
+)
+
+with monitor as m:
+    time.sleep(0.1)
+    m.add_note('starting workers')
+    with multiprocessing.Pool(4) as p:
+        m.update_child_processes()
+        p.map(test_thread, [1e5, 2e5, 3e5, 4e5])
+    
+    m.add_note('finished workers')
+    
+    l = list()
+    for i in tqdm.tqdm(range(int(1e8)), ncols=80):
+        l.append(i)
+        if i > 0 and i % int(3e7) == 0:
+            m.add_note('emptying list', 'dumping all memory', do_print=False)
+            l = list()
+
     stats = m.get_stats()
-stats.get_stats_plot(font_size=10)
+stats.save_memory_plot('tmp/test_parallel.png', font_size=8)
+
 ```
 
-![Monitor output example.](https://storage.googleapis.com/public_data_09324832787/monitor_ex1.png)
+![Monitor output example.](https://storage.googleapis.com/public_data_09324832787/monitor_ex2.png)
 
