@@ -12,24 +12,27 @@ from .monitormessenger import MonitorMessengerInterface
 
 
 import os
+import pathlib
 
 class Monitor:
     def __init__(self, 
         pid: int = None, 
-        include_children: bool = True, 
         snapshot_seconds: float = 0.25,
-        fig_fname: str = None,
+        include_children: bool = True, 
+        log_path: pathlib.Path = None,
+        fig_path: pathlib.Path = None,
         save_fig_freq: int = 10,
+        verbose: bool = False,
     ):
-        #self.snapshot_seconds = snapshot_seconds
-        #self.pid = pid if pid is not None else os.getpid()
-        #self.include_children = include_children
+        # all passed to the worker process before starting
         self.start_kwargs = dict(
             pid = pid if pid is not None else os.getpid(), 
             include_children = include_children,
             snapshot_seconds = snapshot_seconds,
-            fig_fname = fig_fname,
+            log_path = pathlib.Path(log_path) if log_path is not None else None,
+            fig_path = pathlib.Path(fig_path) if fig_path is not None else None,
             save_fig_freq = save_fig_freq,
+            verbose = verbose,
         )
         self.res = WorkerResource(
             worker_process_type = MonitorWorkerProcess,

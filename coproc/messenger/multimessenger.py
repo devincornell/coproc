@@ -39,7 +39,7 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         '''Send data that requires a reply.'''
         self.send_data_message(data, request_reply=True, is_reply=False, channel_id=channel_id)
         
-    def send_reply(self, data: RecvPayloadType, channel_id: ChannelID = None) -> None:
+    def send_reply(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
         '''Send data that acts as a reply to a request.'''
         self.send_data_message(data, request_reply=False, is_reply=True, channel_id=channel_id)
     
@@ -52,6 +52,7 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         '''Send data message.'''
         if request_reply:
             self.request_ctr.sent_request(channel_id)
+        self.request_ctr.sent_message(channel_id)
         self._send_message(DataMessage(payload=payload, request_reply=request_reply, is_reply=is_reply, channel_id=channel_id))
         
     def send_close_request(self) -> None:
@@ -109,6 +110,7 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         msg = self.queue.get(channel_id=channel_id)
         if msg.is_reply:
             self.request_ctr.received_reply(msg.channel_id)
+        self.request_ctr.received_message(msg.channel_id)
         return msg
     
     #################### Low-level message handling ####################
@@ -149,6 +151,18 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     def remaining(self, channel_id: ChannelID = None) -> int:
         '''Number of results requested but not received.'''
         return self.request_ctr.remaining(channel_id)
+    
+    def replies_received(self, channel_id: ChannelID = None) -> int:
+        return self.request_ctr.replies_received(channel_id)
+        
+    def requests_sent(self, channel_id: ChannelID = None) -> int:
+        return self.request_ctr.requests_sent(channel_id)
+    
+    def messages_sent(self, channel_id: ChannelID = None) -> int:
+        return self.request_ctr.messages_sent(channel_id)
+    
+    def messages_received(self, channel_id: ChannelID = None) -> int:
+        return self.request_ctr.messages_received(channel_id)
     
     def queue_size(self, channel_id: ChannelID = None) -> int:
         '''Current size of queue.'''
