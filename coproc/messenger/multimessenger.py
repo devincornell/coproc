@@ -81,14 +81,7 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     def receive_blocking(self, channel_id: ChannelID = None) -> RecvPayloadType:
         '''Blocking receive payload from next data message of this channel.'''
         return self.receive_message_blocking(channel_id=channel_id).payload
-    
-    def receive_message_blocking(self, channel_id: ChannelID = None) -> DataMessage:
-        '''Receive until receiving a message with the given channel, then return it.'''
-        while self.pipe.poll() or self.queue.empty(channel_id=channel_id):
-            msg: Message = self._pipe_recv()
-            self._handle_message(msg)
-        return self.pop_from_queue(channel_id=channel_id)
-    
+            
     #################### Asynchronous availability methods ####################
     def receive_available(self, channel_id: ChannelID = None) -> typing.List[RecvPayloadType]:
         '''Receive currently available messanges.'''
@@ -100,11 +93,6 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
             available.append(self.pop_from_queue(channel_id=channel_id))
         return available
     
-    def available(self, channel_id: ChannelID = None) -> int:
-        '''Number of data available in pipe at this time.'''
-        self._receive_and_handle_available_messages()
-        return self.queue.size(channel_id=channel_id)
-    
     def pop_from_queue(self, channel_id: ChannelID = None) -> RecvPayloadType:
         '''Pop the next item from the queue.'''
         msg = self.queue.get(channel_id=channel_id)
@@ -114,13 +102,37 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
         return msg
     
     #################### Low-level message handling ####################
-    def _receive_and_handle_available_messages(self) -> None:
+    
+    def receive_message_blocking(self, channel_id: ChannelID = None) -> DataMessage:
+        '''Receive until receiving a message with the given channel, then return it.'''
+        while self.pipe.poll() or self.queue.empty(channel_id=channel_id):
+            self._receive_and_handle()
+        return self.pop_from_queue(channel_id=channel_id)
+    
+    def available(self, channel_id: ChannelID = None) -> int:
+        '''Number of data available in pipe at this time.'''
+        self._receive_and_handle_available()
+        return self.queue.size(channel_id=channel_id)
+
+    def await_available(self) -> None:
+        '''Wait until at least one message is received on any channel and placed into queue.'''
+        blocking = True
+        while self.pipe.poll() or blocking:
+            self._receive_and_handle()
+            blocking = False
+    
+    def _receive_and_handle_available(self) -> None:
         '''Receive all data from pipe and place into queue.'''
         while self.pipe.poll():
-            msg: Message = self._pipe_recv()
-            self._handle_message(msg)
+            self._receive_and_handle()
         
-    def _handle_message(self, msg: Message):
+    ############### Handling messages ###############
+    def _receive_and_handle(self) -> None:
+        '''Receive from pipe and handle.'''
+        msg: Message = self._pipe_recv()
+        self._handle_message(msg)
+    
+    def _handle_message(self, msg: Message) -> None:
         '''Take appropriate action for message type. If data, add to queue.'''
         if msg.mtype is MessageType.DATA_PAYLOAD:
             self._queue_put(msg)
@@ -139,13 +151,14 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     def _queue_put(self, msg: Message) -> None:
         '''Put message into queue. Does not include priority.'''
         self.queue.put(msg, msg.channel_id)
-
+        
     def _pipe_recv(self) -> Message:
         '''Receive data from pipe.'''
         try:
             return self.pipe.recv()
         except (EOFError, BrokenPipeError):
             raise BrokenPipeError(f'Tried to receive data when pipe was broken.')
+
 
     ############### Check on pipe, queue, and send/receive counts ###############    
     def remaining(self, channel_id: ChannelID = None) -> int:
