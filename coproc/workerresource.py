@@ -26,16 +26,6 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     method: typing.Optional[typing.Literal['forkserver', 'spawn', 'fork']] = None
     _proc: typing.Optional[multiprocessing.Process] = None
     _messenger: typing.Optional[PriorityMessenger] = None
-
-    @classmethod
-    def new(cls, 
-        worker_process_type: typing.Type[BaseWorkerProcess], 
-        method: typing.Optional[typing.Literal['forkserver', 'spawn', 'fork']] = None,
-    ) -> WorkerResource:
-        return cls(
-            worker_process_type = worker_process_type,
-            method = method,
-        )
     
     ############### Dunder ###############
     def __enter__(self) -> WorkerResource:
