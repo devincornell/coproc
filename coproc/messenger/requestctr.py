@@ -40,9 +40,9 @@ class RequestCtr:
         #self.received_message(channel_id)
         
     def sent_message(self, channel_id: ChannelID):
-        self.requests[channel_id] += 1
+        self.sent[channel_id] += 1
         
     def received_message(self, channel_id: ChannelID):
-        self.replies[channel_id] += 1
+        self.received[channel_id] += 1
     
 

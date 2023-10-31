@@ -1,7 +1,10 @@
 from .baseworkerprocess import BaseWorkerProcess
 from .workerresource import WorkerResource, WorkerIsAlreadyAliveError, WorkerIsAlreadyDeadError
 from .workerresourcepool import WorkerResourcePool
-from .messenger import PriorityMessenger, MultiMessenger, ChannelID, SendPayloadType, RecvPayloadType
-from .monitor import Monitor
-from .pool import Pool
-from .lazypool import LazyPool
+
+# leave it up to submodules to chose their own imports
+from .messenger import *
+from .monitor import *
+from .pool import *
+from .lazypool import *
+
