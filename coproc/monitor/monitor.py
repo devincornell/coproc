@@ -9,7 +9,7 @@ import pandas as pd
 from .monitorprocess import MonitorWorkerProcess
 from ..workerresource import WorkerResource
 from .monitormessenger import MonitorMessengerInterface
-
+from ..messenger import MultiMessenger
 
 import os
 import pathlib
@@ -23,6 +23,7 @@ class Monitor:
         fig_path: pathlib.Path = None,
         save_fig_freq: int = 10,
         verbose: bool = False,
+        method: typing.Optional[typing.Literal['forkserver', 'spawn', 'fork']] = None,
     ):
         # all passed to the worker process before starting
         self.start_kwargs = dict(
@@ -36,6 +37,8 @@ class Monitor:
         )
         self.res = WorkerResource(
             worker_process_type = MonitorWorkerProcess,
+            messenger_type = MultiMessenger,
+            method = method,
         )
     def __enter__(self):
         self.res.start(**self.start_kwargs)
