@@ -4,20 +4,19 @@
 
 This module provides building blocks for running stateful, concurrent processes with specialized functionality that require back-and-forth communication with the host process. The building blocks essentially wrap pairs of processes and duplex pipes for efficient and complex communication. I have also built several useful 
 
-For an introduction, see examples/introduction.ipynb.
+For an introduction, see examples/introduction.ipynb and examples/messenger_introduction.ipynb.
 
 ![Explanatory diagram.](https://storage.googleapis.com/public_data_09324832787/coproc_diagram2.svg)
 
 Building blocks:
 
-+ `WorkerResource`: manage concurrent processes and the pipes they use to communicate. 
++ `WorkerResource`: manage concurrent processes and the pipes they use to communicate. See examples/introduction.ipynb for more.
 + `WorkerResourcePool`: emulates behavior of `multiprocessing.Pool` but with priority queue.
-+ `PriorityMessenger`: used by worker resource to manage multi-channel priority queues for communication between processes.
++ `PriorityMessenger`: used by worker resource to manage multi-channel priority queues for communication between processes. See examples/messenger_introduction.ipynb for more.
 
 Useful applications:
 
 + `Monitor`: higher-level concurrent process for monitoring and reporting on other processes.
-
 
 
 
