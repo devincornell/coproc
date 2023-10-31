@@ -12,7 +12,12 @@ import multiprocessing
 import tqdm
 import time
 
-def test_thread(dump_freq: int):
+import os
+
+#import pytest
+#@pytest.fixture(scope='session')
+def my_thread(dump_freq: int):
+    #multiprocessing.set_start_method("fork")
     l = list()
     for i in range(int(1e8)):
         l.append(i)
@@ -31,16 +36,20 @@ def test_monitor_process():
     with monitor as m:
         time.sleep(0.1)
         m.add_note('starting workers')
+        
+        # ignores if using pytest
+        #if "PYTEST_CURRENT_TEST" not in os.environ:
+        #multiprocessing.set_start_method('spawn')
         with multiprocessing.Pool(4) as p:
             m.update_child_processes()
-            p.map(test_thread, [1e5, 2e5, 3e5, 4e5])
+            p.map(my_thread, [1e5, 2e5, 3e5, 4e5])
         
         m.add_note('finished workers')
         
         l = list()
-        for i in tqdm.tqdm(range(int(1e8)), ncols=80):
+        for i in tqdm.tqdm(range(int(1e6)), ncols=80):
             l.append(i)
-            if i > 0 and i % int(3e7) == 0:
+            if i > 0 and i % int(3e5) == 0:
                 m.add_note('emptying list', 'dumping all memory', do_print=False)
                 l = list()
 
@@ -81,7 +90,7 @@ def test_monitor_simple():
 
                 if result.has_results:
                     result.save_memory_plot('tmp/test.png', verbose=False)
-        time.sleep(1)
+        #time.sleep(0.1)
         
         result = m.get_stats()
         print(result.num_stats)
