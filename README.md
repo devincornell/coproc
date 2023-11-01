@@ -2,7 +2,7 @@
 
 `pip install --upgrade git+https://github.com/devincornell/coproc.git@main`
 
-This module provides building blocks for running stateful, concurrent processes with specialized functionality that require back-and-forth communication with the host process. The building blocks essentially wrap pairs of processes and duplex pipes for efficient and complex communication. I have also built several useful 
+This module provides building blocks for running stateful, concurrent processes that require back-and-forth communication with the host process. 
 
 For an introduction, see examples/introduction.ipynb and examples/messenger_introduction.ipynb.
 
@@ -10,13 +10,13 @@ For an introduction, see examples/introduction.ipynb and examples/messenger_intr
 
 Building blocks:
 
-+ `WorkerResource`: manage concurrent processes and the pipes they use to communicate. See examples/introduction.ipynb for more.
-+ `WorkerResourcePool`: emulates behavior of `multiprocessing.Pool` but with priority queue.
++ `WorkerResource`: manage concurrent processes and the pipes they use to communicate using a messenger. See examples/introduction.ipynb for more.
 + `PriorityMessenger`: used by worker resource to manage multi-channel priority queues for communication between processes. See examples/messenger_introduction.ipynb for more.
++ `WorkerResourcePool`: maintains set of identical worker resources that can process data in a way that is similar to `multiprocessing.Pool`.
 
 Useful applications:
 
-+ `Monitor`: higher-level concurrent process for monitoring and reporting on other processes.
++ `Monitor`: concurrent process for monitoring and reporting on other processes.
 
 
 
