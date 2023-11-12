@@ -25,7 +25,7 @@ Useful applications:
 
 Use `WorkerResource` to manage a single concurrent process. In this example, `EchoProcess` simply echoes back received data.
 
-```
+```python
 import dataclasses
 
 @dataclasses.dataclass
@@ -53,7 +53,7 @@ with coproc.WorkerResource(EchoProcess) as worker:
 
 Instead of using `WorkerResource`'s context manager, you can also use `WorkerResource.start()` and `WorkerResource.terminate()` directly within a custom object.
 
-```
+```python
 @dataclasses.dataclass
 class EchoResource:
     verbose: bool = False
@@ -81,7 +81,7 @@ with EchoResource(verbose=True) as w:
 
 ### `Monitor` Examples
 
-```
+```python
 import multiprocessing
 import tqdm
 
