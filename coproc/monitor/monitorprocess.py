@@ -41,7 +41,8 @@ class MonitorWorkerProcess:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
         if self.fig_path is not None:
             self.fig_path.parent.mkdir(parents=True, exist_ok=True)
-                
+        
+        # add at least two capture windows to make future stuff work
         last_mem = 0
         self.stats += [
             Stat.capture_window(
@@ -76,6 +77,7 @@ class MonitorWorkerProcess:
                         pid = self.root_process().pid,
                         note = msg.note,
                         details = msg.details,
+                        do_label=msg.do_label,
                         do_log = msg.do_log,
                         memory_usage = last_mem,
                         ts = msg.ts,
@@ -158,7 +160,8 @@ class Note:
     '''Manages notes sent from host to worker to be logged/saved.'''
     pid: int
     note: str
-    details: str
+    details: typing.Optional[str]
+    do_label: bool
     do_log: bool
     memory_usage: int
     ts: datetime.datetime

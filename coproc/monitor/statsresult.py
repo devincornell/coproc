@@ -11,7 +11,7 @@ import plotnine
 
 if typing.TYPE_CHECKING:
     #from ..messenger import PriorityMessenger
-    from .monitor import Note, Stat
+    from .monitorprocess import Note, Stat
 
 @dataclasses.dataclass
 class StatsResult:
@@ -22,7 +22,7 @@ class StatsResult:
     
     def notes_df(self):
         '''Return notes as a dataframe.'''
-        df = pd.DataFrame([n.asdict() for n in self.notes])
+        df = pd.DataFrame([n.asdict() for n in self.notes if n.do_label])
         if df.shape[0] > 0:
             df['monitor_time'] = df['ts'] - df['ts'].min()
             df['monitor_minutes'] = df['monitor_time'].map(lambda td: td.total_seconds()/60)
