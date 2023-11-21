@@ -99,6 +99,7 @@ docs: mkdocs pdoc requirements
 mkdocs: example_notebooks
 	mkdocs build
 	cp README.md docs/index.md
+	mkdocs gh-deploy
 
 server_mkdocs:
 	mkdocs serve -a localhost:8882
