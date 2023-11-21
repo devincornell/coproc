@@ -1,4 +1,4 @@
-# Introduction
+# CoProc Python Package
 
 `pip install --upgrade git+https://github.com/devincornell/coproc.git@main`
 
