@@ -105,7 +105,7 @@ server_mkdocs:
 
 pdoc:
 	-mkdir $(PDOC_TARGET_FOLDER)
-	pdoc --docformat google -o $(PDOC_TARGET_FOLDER) $(PACKAGE_FOLDER)
+	# pdoc --docformat google -o $(PDOC_TARGET_FOLDER) $(PACKAGE_FOLDER)
 
 example_notebooks:
 	-mkdir $(EXAMPLE_NOTEBOOK_HTML_FOLDER)
