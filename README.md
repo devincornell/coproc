@@ -1,25 +1,30 @@
 # Introduction
 
-`pip install --upgrade git+https://github.com/devincornell/coproc.git@main`
+`coproc` provides building blocks for running stateful, concurrent, and specialized worker processes that require back-and-forth communication. The name comes from the combination of "cooperative" and "process" - `coproc` makes it easier to create specialized processes that cooperate to solve a single task.
 
-This module provides building blocks for running stateful, concurrent processes that require back-and-forth communication with the host process. 
+## Design
 
-For an introduction, see examples/introduction.ipynb and examples/messenger_introduction.ipynb.
++ In `coproc`, we refer to the main process of a Python script as the _host_, and any daeomon processes it creates as _worker_ processes. 
+
++ The host maintains a `WorkerResource` object which includes the child process and a pipe for transmitting information, as well as a `PriorityMessenger` that manages communications across the channel. 
+
++ `WorkerProcess` exists on the worker side, and maintains the processes state and main event loop. The worker process also includes a `PriorityMessenger` that is used to communicate with the host process.
+
+The following diagram shows how the host and worker work together: they each maintain `PriorityMessenger` objects that support multi-channel priority messaging designs.
 
 ![Explanatory diagram.](https://storage.googleapis.com/public_data_09324832787/coproc_diagram2.svg)
 
-Building blocks:
+### Building blocks:
 
 + `WorkerResource`: manage concurrent processes and the pipes they use to communicate using a messenger. See examples/introduction.ipynb for more.
+
 + `PriorityMessenger`: used by worker resource to manage multi-channel priority queues for communication between processes. See examples/messenger_introduction.ipynb for more.
+
 + `WorkerResourcePool`: maintains set of identical worker resources that can process data in a way that is similar to `multiprocessing.Pool`.
 
-Useful applications:
+### High-level objects:
 
-+ `Monitor`: concurrent process for monitoring and reporting on other processes.
-
-
-
++ `Monitor`: create concurrent process for monitoring and reporting on other processes. Write to logs, generate reports, and 
 
 ### `WorkerResource` and `PriorityMessenger` Examples
 

@@ -1,4 +1,4 @@
-# Introduction to `coproc`
+# Overview
 
 In this notebook, I demonstrate use of the most basic building blocks of `conproc`: `WorkerResource` and `PriorityQueue`.
 

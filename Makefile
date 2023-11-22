@@ -5,7 +5,7 @@ PACKAGE_FOLDER = $(PACKAGE_NAME)/
 PDOC_TARGET_FOLDER = ./site/api/ # pdoc html files will be placed here
 
 EXAMPLE_NOTEBOOK_FOLDER = ./examples/# this is where example notebooks are stored
-EXAMPLE_NOTEBOOK_MARKDOWN_FOLDER = ./docs/examples/# this is where example notebooks are stored
+EXAMPLE_NOTEBOOK_MARKDOWN_FOLDER = ./docs/documentation/# this is where example notebooks are stored
 EXAMPLE_NOTEBOOK_HTML_FOLDER = ./site/example_notebooks/# this is where example notebooks are stored
 
 TESTS_FOLDER = ./tests/ # all pytest files are here
@@ -91,6 +91,10 @@ deploy: build requirements
 
 ################################# CREATE DOCUMENTATION ##############################
 
+# for testing mkdocs
+serve_mkdocs: mkdocs
+	mkdocs serve -a localhost:8882
+
 docs: mkdocs pdoc requirements
 	git add -f --all site/*
 	git add --all docs/*
@@ -100,9 +104,6 @@ mkdocs: example_notebooks
 	mkdocs build
 	cp README.md docs/index.md
 	mkdocs gh-deploy
-
-server_mkdocs:
-	mkdocs serve -a localhost:8882
 
 pdoc:
 	-mkdir $(PDOC_TARGET_FOLDER)
