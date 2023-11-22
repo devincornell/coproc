@@ -491,6 +491,7 @@
 <h1 id="introduction">Introduction</h1>
 <p><code>coproc</code> provides building blocks for running stateful, concurrent, and specialized worker processes that require back-and-forth communication. The name comes from the combination of "cooperative" and "process" - <code>coproc</code> makes it easier to create specialized processes that cooperate to solve a single task.</p>
 <h2 id="design">Design</h2>
+<p><img alt="Explanatory diagram." src="https://storage.googleapis.com/public_data_09324832787/coproc_diagram2.svg" /></p>
 <ul>
 <li>
 <p>In <code>coproc</code>, we refer to the main process of a Python script as the <em>host</em>, and any daeomon processes it creates as <em>worker</em> processes. </p>
@@ -503,7 +504,6 @@
 </li>
 </ul>
 <p>The following diagram shows how the host and worker work together: they each maintain <code>PriorityMessenger</code> objects that support multi-channel priority messaging designs.</p>
-<p><img alt="Explanatory diagram." src="https://storage.googleapis.com/public_data_09324832787/coproc_diagram2.svg" /></p>
 
 
 
