@@ -1,4 +1,6 @@
-# Messaging Between Processes: `PriorityMessenger` and `MultiMessenger`
+# Messaging Between Processes
+
+## `PriorityMessenger` and `MultiMessenger`
 
 The `coproc` messengers are wrappers around standard `multiprocessing.Pipe` objects that create an interface for exchange between processes. There are two primary messenger types that can be used for communications: `PriorityMessenger` and `MultiMessenger`. While they both support the request and channel interfaces, only `PriorityMessenger` supports priorities, as the name would imply. 
 
