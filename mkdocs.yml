@@ -1,4 +1,7 @@
-site_name: My Docs
+site_name: coproc Package
 theme:
   name: material
-  
+  icon:
+    repo: fontawesome/brands/git-alt 
+repo_url: https://github.com/devincornell/coproc
+repo_name: devincornell/coproc
