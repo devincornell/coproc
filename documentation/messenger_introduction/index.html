@@ -20,7 +20,7 @@
     
     
       
-        <title>Messaging Between Processes: PriorityMessenger and MultiMessenger - coproc Package</title>
+        <title>Messaging Between Processes - coproc Package</title>
       
     
     
@@ -65,7 +65,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#messaging-between-processes-prioritymessenger-and-multimessenger" class="md-skip">
+        <a href="#messaging-between-processes" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Messaging Between Processes: PriorityMessenger and MultiMessenger
+              Messaging Between Processes
             
           </span>
         </div>
@@ -323,7 +323,7 @@
           
   
   <span class="md-ellipsis">
-    Messaging Between Processes: PriorityMessenger and MultiMessenger
+    Messaging Between Processes
   </span>
   
 
@@ -334,7 +334,7 @@
         
   
   <span class="md-ellipsis">
-    Messaging Between Processes: PriorityMessenger and MultiMessenger
+    Messaging Between Processes
   </span>
   
 
@@ -356,6 +356,16 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#prioritymessenger-and-multimessenger" class="md-nav__link">
+    <span class="md-ellipsis">
+      PriorityMessenger and MultiMessenger
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PriorityMessenger and MultiMessenger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#sending-messages" class="md-nav__link">
     <span class="md-ellipsis">
       Sending Messages
@@ -363,13 +373,18 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#receiving-messages" class="md-nav__link">
     <span class="md-ellipsis">
       Receiving Messages
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -456,6 +471,16 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#prioritymessenger-and-multimessenger" class="md-nav__link">
+    <span class="md-ellipsis">
+      PriorityMessenger and MultiMessenger
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PriorityMessenger and MultiMessenger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#sending-messages" class="md-nav__link">
     <span class="md-ellipsis">
       Sending Messages
@@ -463,13 +488,18 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#receiving-messages" class="md-nav__link">
     <span class="md-ellipsis">
       Receiving Messages
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -491,7 +521,8 @@
   
 
 
-<h1 id="messaging-between-processes-prioritymessenger-and-multimessenger">Messaging Between Processes: <code>PriorityMessenger</code> and <code>MultiMessenger</code></h1>
+<h1 id="messaging-between-processes">Messaging Between Processes</h1>
+<h2 id="prioritymessenger-and-multimessenger"><code>PriorityMessenger</code> and <code>MultiMessenger</code></h2>
 <p>The <code>coproc</code> messengers are wrappers around standard <code>multiprocessing.Pipe</code> objects that create an interface for exchange between processes. There are two primary messenger types that can be used for communications: <code>PriorityMessenger</code> and <code>MultiMessenger</code>. While they both support the request and channel interfaces, only <code>PriorityMessenger</code> supports priorities, as the name would imply. </p>
 <p>The diagram below shows how both the host and worker processes maintain separate messengers that allow them to communicate together. While I imagine that some of the messenger features will be most often used on one side or the other (for example, the request/reply interface), the messages are identical.</p>
 <p><img alt="Overview diagram." src="https://storage.googleapis.com/public_data_09324832787/coproc_diagram2.svg" /></p>
