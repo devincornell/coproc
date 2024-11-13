@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../messenger_introduction/">
+        <link rel="prev" href="../pool_benchmark/">
       
       
-        <link rel="next" href="../pool_benchmark/">
+        <link rel="next" href="../z-legacy_introduction/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Introduction to Monitor - coproc Package</title>
+        <title>Benchmark Comparison Pool - coproc Package</title>
       
     
     
@@ -65,7 +65,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#introduction-to-monitor" class="md-skip">
+        <a href="#benchmark-comparison-pool" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Introduction to Monitor
+              Benchmark Comparison Pool
             
           </span>
         </div>
@@ -407,29 +407,9 @@
                 
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Introduction to Monitor
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../monitor_introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,35 +418,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#receiving-stats-client-side" class="md-nav__link">
-    <span class="md-ellipsis">
-      Receiving Stats Client-side
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -496,9 +447,18 @@
                 
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../y-pool_benchmark/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -507,6 +467,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -559,23 +520,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#receiving-stats-client-side" class="md-nav__link">
-    <span class="md-ellipsis">
-      Receiving Stats Client-side
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -592,50 +536,40 @@
   
 
 
-<h1 id="introduction-to-monitor">Introduction to <code>Monitor</code></h1>
-<p>The <code>Monitor</code> object is used to create a concurrent process that will monitor the host process memory and cpu usage, record notes, and plot current progress as needed.</p>
+<h1 id="benchmark-comparison-pool">Benchmark Comparison <code>Pool</code></h1>
+<p>Where <code>coproc</code> was designed for situations where you want to maintain persistent, stateful processes, the <code>conproc.Pool</code> interface essentially emulates the behavior of <code>multiprocessing.Pool</code> in order to benchmark the performance of the underlying <code>WorkerResource</code> and <code>PriorityMessenger</code> systems.</p>
+<p><strong><em>RESULTS</em></strong>: similar performance except when thread tasks are small and numerous, in which case <code>coproc</code> is much slower.</p>
 <pre><code class="language-python">import sys
 sys.path.append('..')
 import coproc
+import multiprocessing
 </code></pre>
-<h2 id="receiving-stats-client-side">Receiving Stats Client-side</h2>
-<p>In this example, I open the monitor and it runs while the inner code is executing. The monitor routinely checks for memory usage, and every so often sends a note to the monitor that is recorded. Uing <code>get_stats()</code> we can retrieve the statistics and plot it using <code>get_stats_plot()</code>. Notice that the notes appear in the figure.</p>
 <pre><code class="language-python">import time
-import tqdm
-with coproc.Monitor(snapshot_seconds=0.01) as m:
+def square(v):
+    time.sleep(0.05)
+    return v**2
 
-    l = list()
-    for i in tqdm.tqdm(range(int(1e6)), ncols=80):
-        l.append(i)
-        if i &gt; 0 and i % int(3e5) == 0:
-            m.add_note('dump', 'dumping all memory', do_print=True)
-            l = list() # dump memory
+def map_square(vs, pool):
+    return pool.map(square, vs)
 
-            stats = m.get_stats()
-            p = stats.plot_memory(font_size=5)
-            p.draw()
+n = 3
+values = list(range(100))
+cp = coproc.LazyPool(n)
+
+#map_square(values, cp)
+#map_square(values, cp)
+#map_square(values, cp)
+#map_square(values, cp)
+#%timeit map_square(values, cp)
+with coproc.Pool(n) as p:
+    %time map_square(values, cp)
+    %time map_square(values, p)
 </code></pre>
-<pre><code>['BaseWorkerProcess', 'ChannelID', 'Close', 'CloseRequestMessage', 'DataMessage', 'EncounteredErrorMessage', 'LazyPool', 'MemoryInfoNotAvailableError', 'Message', 'MessageFromProcess', 'MessageFromProcessType', 'MessageNotRecognizedError', 'MessageToProcess', 'MessageToProcessType', 'MessageType', 'Monitor', 'MonitorMessage', 'MonitorMessengerInterface', 'MonitorWorkerProcess', 'MultiMessenger', 'MultiQueue', 'Note', 'Pool', 'PriorityMessenger', 'PriorityMultiQueue', 'PriorityQueue', 'RecvPayloadType', 'ReplyData', 'RequestSaveMemoryFigureMessage', 'RequestStatsMessage', 'ResourceRequestedClose', 'SendPayloadType', 'Stat', 'StatsDataMessage', 'StatsResult', 'SubmitData', 'SubmitNoteMessage', 'UpdateChildProcessesMessage', 'UserfuncError', 'WorkerIsAlreadyAliveError', 'WorkerIsAlreadyDeadError', 'WorkerResource', 'WorkerResourcePool', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__path__', '__spec__', 'annotations', 'baseworkerprocess', 'basicqueue', 'dataclasses', 'datetime', 'dynamicmapprocess', 'enum', 'exceptions', 'lazypool', 'messages', 'messenger', 'monitor', 'monitormessenger', 'monitorprocess', 'multimessenger', 'multiprocessing', 'multiqueue', 'os', 'pathlib', 'pd', 'plotnine', 'plt', 'pool', 'prioritymessenger', 'prioritymultiqueue', 'priorityqueue', 'psutil', 'queue', 'requestctr', 'staticmapprocess', 'statsresult', 'time', 'typing', 'workerresource', 'workerresourcepool']
-
-
-  0%|                                               | 0/1000000 [00:00&lt;?, ?it/s] 18%|█████▎                       | 183064/1000000 [00:00&lt;00:00, 1830550.09it/s]
-
-dump; new_note.details='dumping all memory'
-
-
- 70%|█████████████████████         | 700838/1000000 [00:00&lt;00:00, 882974.08it/s]
-
-dump; new_note.details='dumping all memory'
-
-
-100%|█████████████████████████████| 1000000/1000000 [00:01&lt;00:00, 951835.92it/s]
-
-
-dump; new_note.details='dumping all memory'
+<pre><code>CPU times: user 1.59 s, sys: 108 ms, total: 1.69 s
+Wall time: 1.74 s
+CPU times: user 1.55 s, sys: 116 ms, total: 1.66 s
+Wall time: 1.71 s
 </code></pre>
-<p><img alt="png" src="monitor_introduction_files/monitor_introduction_3_7.png" /></p>
-<p><img alt="png" src="monitor_introduction_files/monitor_introduction_3_8.png" /></p>
-<p><img alt="png" src="monitor_introduction_files/monitor_introduction_3_9.png" /></p>
 
 
 

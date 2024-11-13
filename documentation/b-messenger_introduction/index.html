@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../introduction/">
+        <link rel="prev" href="../a-introduction/">
       
       
-        <link rel="next" href="../monitor_introduction/">
+        <link rel="next" href="../c-monitor_introduction/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -327,66 +327,6 @@
                 
   
   
-  
-    <li class="md-nav__item">
-      <a href="../b-messenger_introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Messaging Between Processes
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../c-monitor_introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Introduction to Monitor
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -471,6 +411,66 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../c-monitor_introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction to Monitor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messenger_introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Messaging Between Processes
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -698,23 +698,21 @@ import time
 </code></pre>
 <h2 id="choosing-a-messenger">Choosing a Messenger</h2>
 <p>While messengers can be used by themselves, they can be managed by <code>WorkerResource</code> objects by passing them to the <code>messenger_type</code> parameter of the constructor. See how <code>WorkerResource</code> creates two messengers: one for the host process and one for the worker process.</p>
-<pre><code class="language-python">@dataclasses.dataclass
-class ExampleProcess:
-    messenger: coproc.PriorityMessenger
-
-    def __call__(self):
-        print(f'process messenger: {self.messenger}')
+<pre><code class="language-python">def example_process(messenger: coproc.PriorityMessenger):
+    print(f'process messenger: {messenger}')
 
 worker = coproc.WorkerResource(
-    worker_process_type =  ExampleProcess,
+    target =  example_process,
     messenger_type = coproc.PriorityMessenger,
 )
 with worker as w:
     time.sleep(1)
     print(f'resource messenger: {w.messenger}')
 </code></pre>
-<pre><code>process messenger: PriorityMessenger(pipe=&lt;multiprocessing.connection.Connection object at 0x7f3991f16c10&gt;, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
-resource messenger: PriorityMessenger(pipe=&lt;multiprocessing.connection.Connection object at 0x7f394a08f880&gt;, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
+<pre><code>process messenger: PriorityMessenger(pipe=&lt;multiprocessing.connection.Connection object at 0x7954057eee90&gt;, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
+
+
+resource messenger: PriorityMessenger(pipe=&lt;multiprocessing.connection.Connection object at 0x795404dc1d90&gt;, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
 </code></pre>
 <h2 id="messenger-interface">Messenger Interface</h2>
 <p>Now I will give some examples for using the messenger interface.</p>
@@ -723,25 +721,18 @@ resource messenger: PriorityMessenger(pipe=&lt;multiprocessing.connection.Connec
 <pre><code class="language-python">CHANNEL_A = 1
 CHANNEL_B = 2
 
-@dataclasses.dataclass
-class EchoProcess1:
-    messenger: coproc.PriorityMessenger
-    def __call__(self):
-        while True:
-            print(f'awaiting messages')
-            self.messenger.await_available()
-            print(f'some messages were found')
-            for data in self.messenger.receive_available(CHANNEL_A):
-                self.messenger.send_norequest(data, CHANNEL_A)
+def echo_process_1(messenger: coproc.PriorityMessenger):
+    while True:
+        print(f'awaiting messages')
+        messenger.await_available()
+        print(f'some messages were found')
+        for data in messenger.receive_available(CHANNEL_A):
+            messenger.send_norequest(data, CHANNEL_A)
 
-            for data in self.messenger.receive_available(CHANNEL_B):
-                self.messenger.send_norequest(data, CHANNEL_B)
+        for data in messenger.receive_available(CHANNEL_B):
+            messenger.send_norequest(data, CHANNEL_B)
 
-            #data = self.messenger.receive_blocking()
-            #print(f'worker received: {data}')
-            #self.messenger.send_norequest(data)
-
-with coproc.WorkerResource(EchoProcess1) as w:
+with coproc.WorkerResource(echo_process_1) as w:
     print(f'{w.messenger.available()=}')
     print(w.messenger.send_norequest('hello', channel_id=CHANNEL_A))
     print(w.messenger.send_norequest('hi', channel_id=CHANNEL_B))
@@ -754,6 +745,8 @@ with coproc.WorkerResource(EchoProcess1) as w:
 <pre><code>awaiting messages
 some messages were found
 awaiting messages
+
+
 w.messenger.available()=0
 None
 None
@@ -763,14 +756,13 @@ w.messenger.receive_blocking(CHANNEL_B)='hi'
 </code></pre>
 <h4 id="request-interface">Request Interface</h4>
 <p>In this example, I use <code>send_request()</code> and <code>send_reply()</code> to send and receive messages synchronously. The messenger will track the number of requests sent, and we can use <code>receive_remaining()</code> to wait for all expected replies to be received.</p>
-<pre><code class="language-python">@dataclasses.dataclass
-class EchoProcess2(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            data = self.messenger.receive_blocking()
-            self.messenger.send_reply(data)
+<pre><code class="language-python">def echo_process_2(messenger: coproc.PriorityMessenger):
+    while True:
+        data = messenger.receive_blocking()
+        messenger.send_reply(data)
 
-with coproc.WorkerResource(EchoProcess2) as w:
+
+with coproc.WorkerResource(echo_process_2) as w:
     print(f'{w.messenger.remaining()=}')
     print(f'{w.messenger.send_request(&quot;hello&quot;)=}')
     print(f'{w.messenger.remaining()=}')
@@ -797,14 +789,12 @@ w.messenger.remaining()=3
 <h4 id="priority-interface">Priority Interface</h4>
 <p>We can set the priority of messages by adding a <code>priority</code> attribute to the message - we used simple wrapper objects here to accomplish that. Notice that the process accesses the higher priority objects first.</p>
 <p>Note that the default priority is <code>-inf</code>, so any message without a priority will be sent to the back of the queue. In this example, we send messages with different priorities and see how they are received in order.</p>
-<pre><code class="language-python">@dataclasses.dataclass
-class PrintProcess(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            for data in self.messenger.receive_available():
-                #self.messenger.send_reply(data)
-                print(data)
-            time.sleep(1)
+<pre><code class="language-python">def print_process(messenger: coproc.PriorityMessenger):
+    while True:
+        for data in messenger.receive_available():
+            #self.messenger.send_reply(data)
+            print(data)
+        time.sleep(1)
 
 @dataclasses.dataclass
 class HighPriorityMessage:
@@ -816,7 +806,7 @@ class LowPriorityMessage:
     text: str
     priority: int = 1 # lower is more improtant
 
-with coproc.WorkerResource(PrintProcess, coproc.PriorityMessenger) as w:
+with coproc.WorkerResource(print_process, coproc.PriorityMessenger) as w:
     for i in range(3):
         w.messenger.send_norequest(LowPriorityMessage(f'low {i}'))
         w.messenger.send_norequest(HighPriorityMessage(f'high {i}'))
@@ -827,6 +817,8 @@ with coproc.WorkerResource(PrintProcess, coproc.PriorityMessenger) as w:
 HighPriorityMessage(text='high 1', priority=0)
 HighPriorityMessage(text='high 2', priority=0)
 LowPriorityMessage(text='low 0', priority=1)
+
+
 LowPriorityMessage(text='low 1', priority=1)
 LowPriorityMessage(text='low 2', priority=1)
 </code></pre>
@@ -845,7 +837,18 @@ class PrintProcess2(coproc.BaseWorkerProcess):
             for data in results:
                 print(data)
 
-with coproc.WorkerResource(PrintProcess2) as w:
+def print_process_2(messenger: coproc.PriorityMessenger):
+    while True:
+        try:
+            message = messenger.await_available()
+            results = messenger.receive_available()
+        except coproc.ResourceRequestedClose as e:
+            messenger.send_error(ValueError('process was closed successfully'))
+            break # exits the process naturally
+        for data in results:
+            print(data)
+
+with coproc.WorkerResource(print_process_2) as w:
     w.messenger.send_norequest('message 1')
     w.messenger.send_close_request()
 
@@ -857,12 +860,15 @@ with coproc.WorkerResource(PrintProcess2) as w:
     time.sleep(0.1) # wait for process to finish. Should I use join here?
 </code></pre>
 <pre><code>Traceback (most recent call last):
-  File "/tmp/ipykernel_1047367/3808203598.py", line 6, in __call__
-    message = self.messenger.await_available()
+  File "/tmp/ipykernel_1006618/3936782591.py", line 17, in print_process_2
+    message = messenger.await_available()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/DataDrive/projects/coproc/examples/../coproc/messenger/multimessenger.py", line 121, in await_available
     self._receive_and_handle()
   File "/DataDrive/projects/coproc/examples/../coproc/messenger/multimessenger.py", line 133, in _receive_and_handle
     self._handle_message(msg)
+
+
   File "/DataDrive/projects/coproc/examples/../coproc/messenger/multimessenger.py", line 147, in _handle_message
     raise ResourceRequestedClose(f'Resource requested that this process close.')
 coproc.messenger.exceptions.ResourceRequestedClose: Resource requested that this process close.

@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../messenger_introduction/">
+        <link rel="prev" href="../b-messenger_introduction/">
       
       
-        <link rel="next" href="../pool_benchmark/">
+        <link rel="next" href="../introduction/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -347,66 +347,6 @@
                 
   
   
-  
-    <li class="md-nav__item">
-      <a href="../c-monitor_introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Introduction to Monitor
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../messenger_introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Messaging Between Processes
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -467,6 +407,66 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messenger_introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Messaging Between Processes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction to Monitor
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -615,27 +615,22 @@ with coproc.Monitor(snapshot_seconds=0.01) as m:
             p = stats.plot_memory(font_size=5)
             p.draw()
 </code></pre>
-<pre><code>['BaseWorkerProcess', 'ChannelID', 'Close', 'CloseRequestMessage', 'DataMessage', 'EncounteredErrorMessage', 'LazyPool', 'MemoryInfoNotAvailableError', 'Message', 'MessageFromProcess', 'MessageFromProcessType', 'MessageNotRecognizedError', 'MessageToProcess', 'MessageToProcessType', 'MessageType', 'Monitor', 'MonitorMessage', 'MonitorMessengerInterface', 'MonitorWorkerProcess', 'MultiMessenger', 'MultiQueue', 'Note', 'Pool', 'PriorityMessenger', 'PriorityMultiQueue', 'PriorityQueue', 'RecvPayloadType', 'ReplyData', 'RequestSaveMemoryFigureMessage', 'RequestStatsMessage', 'ResourceRequestedClose', 'SendPayloadType', 'Stat', 'StatsDataMessage', 'StatsResult', 'SubmitData', 'SubmitNoteMessage', 'UpdateChildProcessesMessage', 'UserfuncError', 'WorkerIsAlreadyAliveError', 'WorkerIsAlreadyDeadError', 'WorkerResource', 'WorkerResourcePool', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__path__', '__spec__', 'annotations', 'baseworkerprocess', 'basicqueue', 'dataclasses', 'datetime', 'dynamicmapprocess', 'enum', 'exceptions', 'lazypool', 'messages', 'messenger', 'monitor', 'monitormessenger', 'monitorprocess', 'multimessenger', 'multiprocessing', 'multiqueue', 'os', 'pathlib', 'pd', 'plotnine', 'plt', 'pool', 'prioritymessenger', 'prioritymultiqueue', 'priorityqueue', 'psutil', 'queue', 'requestctr', 'staticmapprocess', 'statsresult', 'time', 'typing', 'workerresource', 'workerresourcepool']
+<pre><code>  0%|                                               | 0/1000000 [00:00&lt;?, ?it/s]
 
-
-  0%|                                               | 0/1000000 [00:00&lt;?, ?it/s] 18%|█████▎                       | 183064/1000000 [00:00&lt;00:00, 1830550.09it/s]
-
-dump; new_note.details='dumping all memory'
-
-
- 70%|█████████████████████         | 700838/1000000 [00:00&lt;00:00, 882974.08it/s]
+ 22%|██████▍                      | 221137/1000000 [00:00&lt;00:00, 2211208.68it/s]
 
 dump; new_note.details='dumping all memory'
 
 
-100%|█████████████████████████████| 1000000/1000000 [00:01&lt;00:00, 951835.92it/s]
+ 60%|██████████████████            | 600001/1000000 [00:00&lt;00:00, 596357.84it/s]
 
+dump; new_note.details='dumping all memory'
+
+
+100%|█████████████████████████████| 1000000/1000000 [00:01&lt;00:00, 798758.80it/s]
 
 dump; new_note.details='dumping all memory'
 </code></pre>
-<p><img alt="png" src="monitor_introduction_files/monitor_introduction_3_7.png" /></p>
-<p><img alt="png" src="monitor_introduction_files/monitor_introduction_3_8.png" /></p>
-<p><img alt="png" src="monitor_introduction_files/monitor_introduction_3_9.png" /></p>
 
 
 

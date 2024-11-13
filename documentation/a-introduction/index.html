@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../c-monitor_introduction/">
+        <link rel="prev" href="../../installation/">
       
       
-        <link rel="next" href="../messenger_introduction/">
+        <link rel="next" href="../b-messenger_introduction/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -307,66 +307,6 @@
                 
   
   
-  
-    <li class="md-nav__item">
-      <a href="../a-introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../b-messenger_introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Messaging Between Processes
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../c-monitor_introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Introduction to Monitor
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -425,15 +365,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#inherit-from-baseworkerprocess" class="md-nav__link">
-    <span class="md-ellipsis">
-      Inherit from BaseWorkerProcess
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#context-managers" class="md-nav__link">
     <span class="md-ellipsis">
       Context Managers
@@ -451,6 +382,66 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../b-messenger_introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Messaging Between Processes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../c-monitor_introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction to Monitor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -600,15 +591,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#inherit-from-baseworkerprocess" class="md-nav__link">
-    <span class="md-ellipsis">
-      Inherit from BaseWorkerProcess
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#context-managers" class="md-nav__link">
     <span class="md-ellipsis">
       Context Managers
@@ -652,30 +634,22 @@ import coproc
 <p>The following class maintains the state of an example worker process. As long as it is alive, it will simply receive data and echo the data back to the host process. Notice that <code>__init__</code> accepts the messenger and an additional optional parameter. The messenger is passed automatically, whereas the keyword arguments are passed through the <code>.start()</code> method. I will discuss the <code>.receive_blocking()</code> and <code>.send_norequest()</code> methods in more detail later in the messaging section.</p>
 <pre><code class="language-python">import os
 
-class CustomEchoProcess:
-    '''This object represents the spawned process.'''
+def custom_echo_process(messenger: coproc.PriorityMessenger, verbose: bool = False):
+    '''Main process loop.'''
+    if verbose: print(f'Starting process {os.getpid()}')
 
-    def __init__(self, messenger: coproc.PriorityMessenger, verbose: bool = False):
-        '''Called on the host process to initialize the worker process before passing to worker.'''
-        self.messenger = messenger
-        self.verbose = verbose
+    while True:
+        # wait until a new message is received
+        data = messenger.receive_blocking()
+        if verbose: print(f'process {os.getpid()} received: {data}')
 
-    def __call__(self):
-        '''Main process loop.'''
-        if self.verbose: print(f'Starting process {os.getpid()}')
+        # send the same data back
+        messenger.send_norequest(data)
 
-        while True:
-            # wait until a new message is received
-            data = self.messenger.receive_blocking()
-            print(f'process {os.getpid()} received: {data}')
-
-            # send the same data back
-            self.messenger.send_norequest(data)
-
-resource = coproc.WorkerResource(CustomEchoProcess)
+resource = coproc.WorkerResource(custom_echo_process)
 resource
 </code></pre>
-<pre><code>WorkerResource(worker_process_type=&lt;class '__main__.CustomEchoProcess'&gt;, method=None, _proc=None, _messenger=None)
+<pre><code>WorkerResource(target=&lt;function custom_echo_process at 0x785515c40ea0&gt;, messenger_type=&lt;class 'coproc.messenger.prioritymessenger.PriorityMessenger'&gt;, method=None, _proc=None, _messenger=None)
 </code></pre>
 <p>You can see here that the <code>verbose</code> argument is passed through start.</p>
 <pre><code class="language-python">import time
@@ -692,46 +666,40 @@ resource.start()
 time.sleep(0.1)
 resource.terminate()
 </code></pre>
-<pre><code>Starting process 878039
-</code></pre>
-<h4 id="inherit-from-baseworkerprocess">Inherit from <code>BaseWorkerProcess</code></h4>
-<p>For convenience, we can inherit from the dataclass <code>BaseWorkerProcess</code> which includes a <code>PriorityMessenger</code> argument in its <code>__init__</code> method. This is not required, but makes smaller classes. Dataclasses are generally pretty useful in these scenarios because you'll need to pass everything through the constructor anyway.</p>
-<pre><code class="language-python">import dataclasses
-
-@dataclasses.dataclass
-class TempProcess(coproc.BaseWorkerProcess):
-    verbose: bool = False
-
-    def __call__(self):
-        if self.verbose: print(f'Starting process {os.getpid()}')
-        if self.verbose: print(f'Process {os.getpid()} is ending.')
+<pre><code>Starting process 1005612
 </code></pre>
 <h4 id="context-managers">Context Managers</h4>
 <p>The resource should always be used in some type of context manager, and we can use the built-in context manager for simple applications. The downside to this is that you cannot pass any arguments to <code>.start()</code>.</p>
-<pre><code class="language-python">with coproc.WorkerResource(CustomEchoProcess) as w:
+<pre><code class="language-python">with coproc.WorkerResource(custom_echo_process) as w:
     print(type(w))
 </code></pre>
-<pre><code>&lt;class 'coproc.workerresource.WorkerResource'&gt;
+<pre><code>&lt;class 'coproc.worker_resource.worker_resource.WorkerResource'&gt;
 </code></pre>
 <p>Typically it will be better to create your own wrapper objects for cleaner interfaces. Here I use a dataclass that creates a <code>WorkerResource</code> in the constructor and provide the most basic context management.</p>
-<pre><code class="language-python">import dataclasses
+<pre><code class="language-python">import typing
+import dataclasses
 
 @dataclasses.dataclass
 class EchoResource:
     verbose: bool = False
-    resource: coproc.WorkerResource = dataclasses.field(default_factory=lambda: coproc.WorkerResource(CustomEchoProcess))
+    resource: coproc.WorkerResource = dataclasses.field(default_factory=lambda: coproc.WorkerResource(custom_echo_process))
 
-    def __enter__(self) -&gt; coproc.PriorityMessenger:
+    def __enter__(self) -&gt; typing.Self:
         self.resource.start(verbose=self.verbose)
-        return self.resource
+        return self
 
     def __exit__(self, *args):
         self.resource.terminate()
 
+    @property
+    def messenger(self) -&gt; coproc.PriorityMessenger:
+        '''Expose the messenger to the user.'''
+        return self.resource.messenger
+
 with EchoResource(verbose=True) as w:
     print(w)
 </code></pre>
-<pre><code>WorkerResource(worker_process_type=&lt;class '__main__.CustomEchoProcess'&gt;, method=None, _proc=&lt;ForkProcess name='ForkProcess-4' pid=878049 parent=878005 started&gt;, _messenger=PriorityMessenger(pipe=&lt;multiprocessing.connection.Connection object at 0x7ff775d0a4f0&gt;, queue=PriorityMultiQueue(pqueues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter())))
+<pre><code>EchoResource(verbose=True, resource=WorkerResource(target=&lt;function custom_echo_process at 0x785515c40ea0&gt;, messenger_type=&lt;class 'coproc.messenger.prioritymessenger.PriorityMessenger'&gt;, method=None, _proc=&lt;ForkProcess name='ForkProcess-4' pid=1005619 parent=1005583 started&gt;, _messenger=PriorityMessenger(pipe=&lt;multiprocessing.connection.Connection object at 0x785515c7f510&gt;, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))))
 </code></pre>
 <h1 id="messaging-between-processes-prioritymessenger-and-multimessenger">Messaging Between Processes: <code>PriorityMessenger</code> and <code>MultiMessenger</code></h1>
 <p>The <code>coproc</code> messengers are wrappers around standard <code>multiprocessing.Pipe</code> objects that create an interface for exchange between processes. There are two primary messenger types that can be used for communications: <code>PriorityMessenger</code> and <code>MultiMessenger</code>. While they both support the request and channel interfaces, only <code>PriorityMessenger</code> supports priorities, as the name would imply. </p>
@@ -776,23 +744,22 @@ with EchoResource(verbose=True) as w:
 <li><code>receive_remaining()</code> yields replies on the specified channel until all outstanding requests have been replied to.</li>
 </ul>
 <pre><code class="language-python">with EchoResource(verbose=True) as w:
-    w.messenger.send_norequest('hello')
+    w.resource.messenger.send_norequest('hello')
     print(w.messenger.receive_blocking())
 </code></pre>
-<pre><code>Starting process 878050
-process 878050 received: hello
+<pre><code>Starting process 1005620
+process 1005620 received: hello
 hello
 </code></pre>
 <h4 id="requests">Requests</h4>
 <p>The messenger also has support for handling messages that act as requests and replies. Alternatively, you may use a combination of <code>.send_request</code> (on the host side) and <code>.send_reply</code> (on the worker side) to send requests that are expected to have replies. You can check the number of remaining messages using <code>.remaining()</code>, and call <code>.receive_remaining()</code> to block while retrieving all remaining messages. You, the client, must manually manage the request-reply pattern, but this is intended to be used as a way of keeping track of how many messages are expected to be received.</p>
-<pre><code class="language-python">@dataclasses.dataclass
-class EchoProcess1(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            data = self.messenger.receive_blocking()
-            self.messenger.send_reply(data)
+<pre><code class="language-python">def another_echo_process(messenger: coproc.PriorityMessenger):
+    '''Main process loop.'''
+    while True:
+        data = messenger.receive_blocking()
+        messenger.send_reply(data)
 
-with coproc.WorkerResource(EchoProcess1) as w:
+with coproc.WorkerResource(another_echo_process) as w:
     print(w.messenger.remaining())
     w.messenger.send_request('hello')
     print(w.messenger.remaining())
@@ -814,7 +781,7 @@ hello
 </code></pre>
 <h4 id="message-availability">Message Availability</h4>
 <p>When juggling between receiving messages and other tasks, it is often helpful to retrieve all messages that are available in the queue at a given point in time. Check how many messages have been received using <code>.available()</code> and retrieve available messages using <code>.receive_available()</code> instead of <code>.receive_blocking()</code>.</p>
-<pre><code class="language-python">with coproc.WorkerResource(EchoProcess1) as w:
+<pre><code class="language-python">with coproc.WorkerResource(another_echo_process) as w:
     print(w.messenger.available())
     w.messenger.send_request('hello')
     print(w.messenger.available())
@@ -839,16 +806,15 @@ class DataMessage:
     data: int
     priority: int = 1 # lower priority
 
-@dataclasses.dataclass
-class EchoProcess2(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            num = self.messenger.receive_blocking()
-            self.messenger.send_reply(DataMessage(num))
-            if num &lt; 0:
-                self.messenger.send_norequest(WarningMessage('negative number'))
+def athird_echo_process(messenger: coproc.PriorityMessenger):
+    '''Main process loop.'''
+    while True:
+        num = messenger.receive_blocking()
+        messenger.send_reply(DataMessage(num))
+        if num &lt; 0:
+            messenger.send_norequest(WarningMessage('negative number'))
 
-with coproc.WorkerResource(EchoProcess2) as w:
+with coproc.WorkerResource(athird_echo_process) as w:
     w.messenger.send_request(1)
     time.sleep(0.1)
     print(w.messenger.receive_available())
@@ -869,21 +835,19 @@ class Channels(enum.Enum):
     DATA = 1
     WARNING = 2
 
-@dataclasses.dataclass
-class EchoProcess3(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            try:
-                data = self.messenger.receive_blocking(Channels.DATA)
-            except coproc.ResourceRequestedClose:
-                break
+def afourth_echo_process(messenger: coproc.PriorityMessenger):
+    while True:
+        try:
+            data = messenger.receive_blocking(Channels.DATA)
+        except coproc.ResourceRequestedClose:
+            break
 
-            if len(data) &lt; 10:
-                # send a message on the warning channel
-                self.messenger.send_norequest(f'warning: data must be positive', Channels.WARNING)
+        if len(data) &lt; 10:
+            # send a message on the warning channel
+            messenger.send_norequest(f'warning: data must be positive', Channels.WARNING)
 
-            # either way, echo result
-            self.messenger.send_reply(data, Channels.DATA)
+        # either way, echo result
+        messenger.send_reply(data, Channels.DATA)
 
 
 def receive_print_warnings(message: str, messenger: coproc.PriorityMessenger) -&gt; str:
@@ -898,7 +862,7 @@ def receive_print_warnings(message: str, messenger: coproc.PriorityMessenger) -&
 
     return data
 
-with coproc.WorkerResource(EchoProcess3) as w:
+with coproc.WorkerResource(afourth_echo_process) as w:
     print(receive_print_warnings('hello', w.messenger))
     print(receive_print_warnings('world', w.messenger))
     print(receive_print_warnings('hello world!', w.messenger))
@@ -917,20 +881,20 @@ hello world!
 </code></pre>
 <h4 id="system-messages">System Messages</h4>
 <p>There are two special types of messages that will be prioritized over all other messages: sending errors using <code>send_error()</code> (typically sent from worker process) and sending a termination signal using <code>send_close_request()</code> (typically sent by the host process). The <code>send_error()</code> message will send a signal that raises the sent exception on the client side, and <code>send_close_request()</code> will raise a <code>ResourceRequestedClose</code> exception on the worker side. You will need to handle these cases on both sides of the pipe.</p>
-<pre><code class="language-python">@dataclasses.dataclass
-class EchoProcess4(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            try:
-                data = self.messenger.receive_blocking()
-            except coproc.ResourceRequestedClose:
-                break            
-            if data &gt;= 0:
-                self.messenger.send_reply(data)
-            else:
-                self.messenger.send_error(ValueError('data must be positive'))
+<pre><code class="language-python">def afifth_echo_process(messenger: coproc.PriorityMessenger):
+    while True:
+        try:
+            data = messenger.receive_blocking()
+        except coproc.ResourceRequestedClose:
+            break            
+        if data &gt;= 0:
+            messenger.send_reply(data)
+        else:
+            messenger.send_error(ValueError('data must be positive'))
 
-with coproc.WorkerResource(EchoProcess4) as w:
+
+
+with coproc.WorkerResource(afifth_echo_process) as w:
 
     # regular request/reply
     w.messenger.send_request(1)
@@ -985,36 +949,35 @@ class AlreadyNotPrintingError(Exception):
 
 @dataclasses.dataclass
 class PrintingProcess:
-    messenger: coproc.PriorityMessenger # every process must accept this
     print_frequency: int # these must be set at worker start
     print_char: str
     keep_printing: bool # this can optionally be set
 
-    def __call__(self):
+    def __call__(self, messenger: coproc.PriorityMessenger):
         print(f'{self.keep_printing=}')
         while True:
             try:
                 # if we're not printing, keep waiting for a new message
-                msgs = self.messenger.receive_available()#blocking = not self.keep_printing)
+                msgs = messenger.receive_available()#blocking = not self.keep_printing)
             except IndexError:
                 msgs = []
 
             for msg in msgs:
-                self.handle_message(msg)
+                self.handle_message(messenger, msg)
 
             if self.keep_printing:
                 print(self.print_char, end='', flush=True)
                 time.sleep(self.print_frequency)
 
-    def handle_message(self, msg: typing.Union[StartPrinting, StopPrinting, ChangePrintBehavior]):
+    def handle_message(self, messenger: coproc.PriorityMessenger, msg: typing.Union[StartPrinting, StopPrinting, ChangePrintBehavior]):
         if isinstance(msg, StartPrinting):
             if self.keep_printing:
-                self.messenger.send_error(AlreadyPrintingError())
+                messenger.send_error(AlreadyPrintingError())
             self.keep_printing = True
 
         elif isinstance(msg, StopPrinting):
             if not self.keep_printing:
-                self.messenger.send_error(AlreadyNotPrintingError())
+                messenger.send_error(AlreadyNotPrintingError())
             self.keep_printing = False
 
         elif isinstance(msg, ChangePrintBehavior):
@@ -1023,9 +986,9 @@ class PrintingProcess:
 
         else:
             # process should die in this case
-            self.messenger.send_error(NotImplementedError(f'Unknown message type: {type(msg)}'))
+            messenger.send_error(NotImplementedError(f'Unknown message type: {type(msg)}'))
 
-        self.messenger.send_reply(Receipt())
+        messenger.send_reply(Receipt())
 
 </code></pre>
 <pre><code class="language-python">@dataclasses.dataclass
@@ -1046,16 +1009,15 @@ class PrintProcessController:
 class Printer:
 
     def __init__(self, print_frequency: int, print_char: str, start_printing: bool = False):
-        # passed to PrintingProcess when starting
-        self.process_kwargs = dict(
+        target = PrintingProcess(
             print_frequency = print_frequency, 
             print_char = print_char, 
             keep_printing = start_printing
         )
-        self.resource = coproc.WorkerResource(PrintingProcess)
+        self.resource = coproc.WorkerResource(target=target)
 
     def __enter__(self) -&gt; PrintProcessController:
-        self.resource.start(**self.process_kwargs)
+        self.resource.start()
         return PrintProcessController(self.resource.messenger)
 
     def __exit__(self, *args):
@@ -1082,12 +1044,14 @@ class Printer:
 </code></pre>
 <pre><code>self.keep_printing=False
 
-----
+
 
 ----
 
 ----
-xxxxyyyyyyyyyyyyyyyyyy
+
+----
+xxxxyyyyyyyyyyyyyyyyyyy
 ----
 
 ----
