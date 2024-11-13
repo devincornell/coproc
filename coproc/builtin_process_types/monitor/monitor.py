@@ -7,9 +7,9 @@ import multiprocessing.context
 import pandas as pd
 
 from .monitorprocess import MonitorWorkerProcess
-from ..legacy_worker_resource import LegacyWorkerResource
+from ...legacy_worker_resource import LegacyWorkerResource
 from .monitormessenger import MonitorMessengerInterface
-from ..messenger import MultiMessenger
+from ...messenger import MultiMessenger
 
 import os
 import pathlib

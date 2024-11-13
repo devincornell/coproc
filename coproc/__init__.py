@@ -4,7 +4,7 @@ from .workerresourcepool import WorkerResourcePool
 
 # leave it up to submodules to chose their own imports
 from .messenger import *
-from .monitor import *
+from .builtin_process_types import *
 from .pool import *
 from .lazypool import *
 

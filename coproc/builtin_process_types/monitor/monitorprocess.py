@@ -10,7 +10,7 @@ import psutil
 import os
 import time
 
-from ..messenger import ResourceRequestedClose, PriorityMessenger
+from ...messenger import ResourceRequestedClose, PriorityMessenger
 #from ..workerresource import WorkerResource
 
 from .monitormessenger import SubmitNoteMessage, RequestStatsMessage, StatsDataMessage, UpdateChildProcessesMessage, RequestSaveMemoryFigureMessage

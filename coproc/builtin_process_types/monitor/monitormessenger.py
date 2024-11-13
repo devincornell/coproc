@@ -10,7 +10,7 @@ import pandas as pd
 from .statsresult import StatsResult
 
 if typing.TYPE_CHECKING:
-    from ..messenger import PriorityMessenger
+    from ...messenger import PriorityMessenger
     #from .monitor import Note, Stat
 
 #import enum
