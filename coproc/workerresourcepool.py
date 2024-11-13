@@ -2,14 +2,13 @@ from __future__ import annotations
 import typing
 import dataclasses
 
-from .workerresource import WorkerResource
+from .legacy_worker_resource import LegacyWorkerResource, BaseWorkerProcess
 from .messenger import PriorityMessenger, SendPayloadType, RecvPayloadType, ChannelID
-from .baseworkerprocess import BaseWorkerProcess
 
 
 @dataclasses.dataclass
 class WorkerResourcePool:
-    workers: typing.List[WorkerResource]
+    workers: typing.List[LegacyWorkerResource]
     start_kwargs: typing.Dict[str, typing.Any]
     
     @classmethod
@@ -22,7 +21,7 @@ class WorkerResourcePool:
         '''Create new workerResources and track start kwargs.'''
         workers = list()
         for _ in range(n):
-            workers.append(WorkerResource(
+            workers.append(LegacyWorkerResource(
                 worker_process_type = worker_process_type,
                 messenger_type = messenger_type,
             ))
@@ -65,7 +64,7 @@ class WorkerResourcePool:
             pass
 
     ################### manipulating workers ###################
-    def apply_to_workers(self, func: typing.Callable[[WorkerResource], typing.Any]):
+    def apply_to_workers(self, func: typing.Callable[[LegacyWorkerResource], typing.Any]):
         return [func(w) for w in self.workers]
     
     ################### message sending/receiving ###################

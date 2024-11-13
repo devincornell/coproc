@@ -10,7 +10,7 @@ import multiprocessing.context
 #from .messenger import PriorityMessenger
 #from .messenger import ResourceRequestedClose, DataMessage, SendPayloadType, RecvPayloadType, PriorityMessenger
 from ..messenger import MultiMessenger
-from ..workerresource import WorkerResource # replace with wrpool
+from ..legacy_worker_resource import LegacyWorkerResource # replace with wrpool
 #from .mapworker import MapWorkerProcess, MapDataMessage, UpdateUserFuncMessage, SendPayloadType, RecvPayloadType
 from .dynamicmapprocess import DynamicMapProcess, MapDataMessage, UpdateUserFuncMessage, SendPayloadType, RecvPayloadType
 
@@ -18,7 +18,7 @@ class Pool:
     def __init__(self, n: int, verbose: bool = False, messenger_type: typing.Type[MultiMessenger] = MultiMessenger):
         self.workers = list()
         for _ in range(n):
-            w = WorkerResource(
+            w = LegacyWorkerResource(
                 worker_process_type = DynamicMapProcess,
                 messenger_type=messenger_type,
             )
@@ -103,7 +103,7 @@ class Pool:
         self._apply_to_workers(lambda w: w.terminate(check_alive=check_alive))
 
     ################### manipulating workers ###################
-    def _apply_to_workers(self, func: typing.Callable[[WorkerResource]]):
+    def _apply_to_workers(self, func: typing.Callable[[LegacyWorkerResource]]):
         return [func(w) for w in self.workers]
 
 

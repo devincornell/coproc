@@ -6,20 +6,12 @@ import multiprocessing.connection
 import multiprocessing.context
 
 from .baseworkerprocess import BaseWorkerProcess
-from .messenger import PriorityMessenger, SendPayloadType, RecvPayloadType
-
-class WorkerIsAlreadyAliveError(BaseException):
-    '''Used when trying to start a worker that is already alive.'''
-
-class WorkerIsAlreadyDeadError(BaseException):
-    '''Used when trying to stop a worker that is already stopped.'''
-
-class WorkerIsDeadError(BaseException):
-    '''Used when accessing a resource that only exists when the worker is alive.'''
+from ..messenger import PriorityMessenger, SendPayloadType, RecvPayloadType
+from ..worker_resource import WorkerIsAlreadyAliveError, WorkerIsAlreadyDeadError, WorkerIsDeadError
 
 
 @dataclasses.dataclass
-class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
+class LegacyWorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     '''Simplest worker resource.'''
     worker_process_type: typing.Type[BaseWorkerProcess]
     messenger_type: typing.Type[PriorityMessenger] = PriorityMessenger
@@ -28,7 +20,7 @@ class WorkerResource(typing.Generic[SendPayloadType, RecvPayloadType]):
     _messenger: typing.Optional[PriorityMessenger] = None
     
     ############### Dunder ###############
-    def __enter__(self) -> WorkerResource:
+    def __enter__(self) -> typing.Self:
         '''Starts worker with no parameters and returns it.'''
         try:
             self.start()

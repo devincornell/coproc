@@ -5,10 +5,9 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.context
 
-from ..baseworkerprocess import BaseWorkerProcess
-#from .messenger import PriorityMessenger
+
 from ..messenger import ResourceRequestedClose, SendPayloadType, RecvPayloadType, PriorityMessenger
-from ..workerresource import WorkerResource
+from ..legacy_worker_resource import LegacyWorkerResource, BaseWorkerProcess
 
 
 class MapMessage:
@@ -95,7 +94,7 @@ class MapMessenger:
 
 class MapWorker:
     def __init__(self, verbose: bool = False):
-        self.res = WorkerResource(
+        self.res = LegacyWorkerResource(
             worker_process_type = MapWorkerProcess,
         )
         self.start_kwargs = {

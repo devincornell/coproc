@@ -5,7 +5,7 @@ import multiprocessing
 import multiprocessing.connection
 import multiprocessing.context
 
-from ..baseworkerprocess import BaseWorkerProcess
+from ..legacy_worker_resource import BaseWorkerProcess
 #from .messenger import PriorityMessenger
 from ..messenger import ResourceRequestedClose, SendPayloadType, RecvPayloadType
 #from .messenger import PriorityMessenger, MultiMessenger

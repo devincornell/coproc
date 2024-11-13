@@ -1,6 +1,6 @@
 import dataclasses
 
-from .messenger import PriorityMessenger
+from ..messenger import PriorityMessenger
 
 @dataclasses.dataclass
 class BaseWorkerProcess:

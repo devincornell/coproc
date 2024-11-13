@@ -7,7 +7,7 @@ import multiprocessing.context
 import pandas as pd
 
 from .monitorprocess import MonitorWorkerProcess
-from ..workerresource import WorkerResource
+from ..legacy_worker_resource import LegacyWorkerResource
 from .monitormessenger import MonitorMessengerInterface
 from ..messenger import MultiMessenger
 
@@ -35,7 +35,7 @@ class Monitor:
             save_fig_freq = save_fig_freq,
             verbose = verbose,
         )
-        self.res = WorkerResource(
+        self.res = LegacyWorkerResource(
             worker_process_type = MonitorWorkerProcess,
             messenger_type = MultiMessenger,
             method = method,
