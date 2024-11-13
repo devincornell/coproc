@@ -1,6 +1,8 @@
-# Overview
+# Overview of Legacy Functionality
 
-In this notebook, I demonstrate use of the most basic building blocks of `conproc`: `WorkerResource` and `PriorityQueue`.
+***NOTE***: this notebook was created in version `0.3` after the functionality of `WorkerResource` was changed, and the old version was changed to `LegacyWorkerResource`. This notebook is kept for historical reasons, and to demonstrate the old functionality.
+
+In this notebook, I demonstrate use of the most basic building blocks of `conproc`: `LegacyWorkerResource` and `PriorityQueue`.
 
 
 
@@ -10,11 +12,11 @@ sys.path.append('../')
 import coproc
 ```
 
-## `WorkerResource` and Managing Worker Processes
+## `LegacyWorkerResource` and Managing Worker Processes
 
-The `WorkerResource` object is the most basic tool for working with concurrent processes. It manages both `Process` and `Pipe` objects wrapped in multi-channel priority queues with robust messaging support. The most common use case is to create a `WorkerResource` object and then manage the resource using a wrapper object. While it does have a built-in context manager for starting and ending the process, you will probably want to create your own outer context manager using the basic `.start()`, `.stop()`, and `.join()` methods.
+The `LegacyWorkerResource` object is the most basic tool for working with concurrent processes. It manages both `Process` and `Pipe` objects wrapped in multi-channel priority queues with robust messaging support. The most common use case is to create a `LegacyWorkerResource` object and then manage the resource using a wrapper object. While it does have a built-in context manager for starting and ending the process, you will probably want to create your own outer context manager using the basic `.start()`, `.stop()`, and `.join()` methods.
 
-The `WorkerResource` constructor accepts a class that is used to manage the process. That class' `__init__` method will be called in the host process with a single `PriorityMessenger` argument, and you may pass additional keyword arguments through the `.start()` method. The resulting instance will then be passed to the process for the duration of the `__call__` method, which does not accept any arguments on its own - you must pass any relevant data through the constructor when starting the process.
+The `LegacyWorkerResource` constructor accepts a class that is used to manage the process. That class' `__init__` method will be called in the host process with a single `PriorityMessenger` argument, and you may pass additional keyword arguments through the `.start()` method. The resulting instance will then be passed to the process for the duration of the `__call__` method, which does not accept any arguments on its own - you must pass any relevant data through the constructor when starting the process.
 
 The following class maintains the state of an example worker process. As long as it is alive, it will simply receive data and echo the data back to the host process. Notice that `__init__` accepts the messenger and an additional optional parameter. The messenger is passed automatically, whereas the keyword arguments are passed through the `.start()` method. I will discuss the `.receive_blocking()` and `.send_norequest()` methods in more detail later in the messaging section.
 
@@ -42,14 +44,14 @@ class CustomEchoProcess:
             # send the same data back
             self.messenger.send_norequest(data)
 
-resource = coproc.WorkerResource(CustomEchoProcess)
+resource = coproc.LegacyWorkerResource(CustomEchoProcess)
 resource
 ```
 
 
 
 
-    WorkerResource(worker_process_type=<class '__main__.CustomEchoProcess'>, method=None, _proc=None, _messenger=None)
+    LegacyWorkerResource(worker_process_type=<class '__main__.CustomEchoProcess'>, messenger_type=<class 'coproc.messenger.prioritymessenger.PriorityMessenger'>, method=None, _proc=None, _messenger=None)
 
 
 
@@ -72,7 +74,7 @@ time.sleep(0.1)
 resource.terminate()
 ```
 
-    Starting process 878039
+    Starting process 1004223
 
 
 #### Inherit from `BaseWorkerProcess`
@@ -98,14 +100,14 @@ The resource should always be used in some type of context manager, and we can u
 
 
 ```python
-with coproc.WorkerResource(CustomEchoProcess) as w:
+with coproc.LegacyWorkerResource(CustomEchoProcess) as w:
     print(type(w))
 ```
 
-    <class 'coproc.workerresource.WorkerResource'>
+    <class 'coproc.legacy_worker_resource.legacy_worker_resource.LegacyWorkerResource'>
 
 
-Typically it will be better to create your own wrapper objects for cleaner interfaces. Here I use a dataclass that creates a `WorkerResource` in the constructor and provide the most basic context management.
+Typically it will be better to create your own wrapper objects for cleaner interfaces. Here I use a dataclass that creates a `LegacyWorkerResource` in the constructor and provide the most basic context management.
 
 
 ```python
@@ -114,7 +116,7 @@ import dataclasses
 @dataclasses.dataclass
 class EchoResource:
     verbose: bool = False
-    resource: coproc.WorkerResource = dataclasses.field(default_factory=lambda: coproc.WorkerResource(CustomEchoProcess))
+    resource: coproc.LegacyWorkerResource = dataclasses.field(default_factory=lambda: coproc.LegacyWorkerResource(CustomEchoProcess))
     
     def __enter__(self) -> coproc.PriorityMessenger:
         self.resource.start(verbose=self.verbose)
@@ -127,7 +129,7 @@ with EchoResource(verbose=True) as w:
     print(w)
 ```
 
-    WorkerResource(worker_process_type=<class '__main__.CustomEchoProcess'>, method=None, _proc=<ForkProcess name='ForkProcess-4' pid=878049 parent=878005 started>, _messenger=PriorityMessenger(pipe=<multiprocessing.connection.Connection object at 0x7ff775d0a4f0>, queue=PriorityMultiQueue(pqueues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter())))
+    LegacyWorkerResource(worker_process_type=<class '__main__.CustomEchoProcess'>, messenger_type=<class 'coproc.messenger.prioritymessenger.PriorityMessenger'>, method=None, _proc=<ForkProcess name='ForkProcess-4' pid=1004234 parent=1004200 started>, _messenger=PriorityMessenger(pipe=<multiprocessing.connection.Connection object at 0x700bdd366210>, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter())))
 
 
 # Messaging Between Processes: `PriorityMessenger` and `MultiMessenger`
@@ -175,8 +177,10 @@ with EchoResource(verbose=True) as w:
     print(w.messenger.receive_blocking())
 ```
 
-    Starting process 878050
-    process 878050 received: hello
+    Starting process 1004235
+    process 1004235 received: hello
+
+
     hello
 
 
@@ -193,7 +197,7 @@ class EchoProcess1(coproc.BaseWorkerProcess):
             data = self.messenger.receive_blocking()
             self.messenger.send_reply(data)
             
-with coproc.WorkerResource(EchoProcess1) as w:
+with coproc.LegacyWorkerResource(EchoProcess1) as w:
     print(w.messenger.remaining())
     w.messenger.send_request('hello')
     print(w.messenger.remaining())
@@ -221,7 +225,7 @@ When juggling between receiving messages and other tasks, it is often helpful to
 
 
 ```python
-with coproc.WorkerResource(EchoProcess1) as w:
+with coproc.LegacyWorkerResource(EchoProcess1) as w:
     print(w.messenger.available())
     w.messenger.send_request('hello')
     print(w.messenger.available())
@@ -231,7 +235,7 @@ with coproc.WorkerResource(EchoProcess1) as w:
 ```
 
     0
-    0
+    1
     1
     ['hello']
 
@@ -261,7 +265,7 @@ class EchoProcess2(coproc.BaseWorkerProcess):
             if num < 0:
                 self.messenger.send_norequest(WarningMessage('negative number'))
     
-with coproc.WorkerResource(EchoProcess2) as w:
+with coproc.LegacyWorkerResource(EchoProcess2) as w:
     w.messenger.send_request(1)
     time.sleep(0.1)
     print(w.messenger.receive_available())
@@ -318,7 +322,7 @@ def receive_print_warnings(message: str, messenger: coproc.PriorityMessenger) ->
         
     return data
 
-with coproc.WorkerResource(EchoProcess3) as w:
+with coproc.LegacyWorkerResource(EchoProcess3) as w:
     print(receive_print_warnings('hello', w.messenger))
     print(receive_print_warnings('world', w.messenger))
     print(receive_print_warnings('hello world!', w.messenger))
@@ -356,7 +360,7 @@ class EchoProcess4(coproc.BaseWorkerProcess):
             else:
                 self.messenger.send_error(ValueError('data must be positive'))
 
-with coproc.WorkerResource(EchoProcess4) as w:
+with coproc.LegacyWorkerResource(EchoProcess4) as w:
     
     # regular request/reply
     w.messenger.send_request(1)
@@ -383,7 +387,7 @@ with coproc.WorkerResource(EchoProcess4) as w:
     False
 
 
-`WorkerResource` and `PriorityMessenger` serve as essential building blocks for building interfaces to concurrent processes, including some that appear as part of this package. See the documentation for examples of those.
+`LegacyWorkerResource` and `PriorityMessenger` serve as essential building blocks for building interfaces to concurrent processes, including some that appear as part of this package. See the documentation for examples of those.
 
 ## An Inspirational Example
 
@@ -494,7 +498,7 @@ class Printer:
             print_char = print_char, 
             keep_printing = start_printing
         )
-        self.resource = coproc.WorkerResource(PrintingProcess)
+        self.resource = coproc.LegacyWorkerResource(PrintingProcess)
         
     def __enter__(self) -> PrintProcessController:
         self.resource.start(**self.process_kwargs)
@@ -531,13 +535,13 @@ with Printer(print_frequency=0.05, print_char='x', start_printing=False) as p:
     ----
     
     ----
-    
-    ----
-    xxxxyyyyyyyyyyyyyyyyyy
+    xxxx
     ----
     
     ----
-
+    yyyyyyyyyyyyyyyyyy
+    ----
+    y
 
     NoneType: None
 

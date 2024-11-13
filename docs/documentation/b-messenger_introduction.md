@@ -65,15 +65,11 @@ While messengers can be used by themselves, they can be managed by `WorkerResour
 
 
 ```python
-@dataclasses.dataclass
-class ExampleProcess:
-    messenger: coproc.PriorityMessenger
-    
-    def __call__(self):
-        print(f'process messenger: {self.messenger}')
+def example_process(messenger: coproc.PriorityMessenger):
+    print(f'process messenger: {messenger}')
 
 worker = coproc.WorkerResource(
-    worker_process_type =  ExampleProcess,
+    target =  example_process,
     messenger_type = coproc.PriorityMessenger,
 )
 with worker as w:
@@ -81,8 +77,10 @@ with worker as w:
     print(f'resource messenger: {w.messenger}')
 ```
 
-    process messenger: PriorityMessenger(pipe=<multiprocessing.connection.Connection object at 0x7f3991f16c10>, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
-    resource messenger: PriorityMessenger(pipe=<multiprocessing.connection.Connection object at 0x7f394a08f880>, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
+    process messenger: PriorityMessenger(pipe=<multiprocessing.connection.Connection object at 0x7954057eee90>, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
+
+
+    resource messenger: PriorityMessenger(pipe=<multiprocessing.connection.Connection object at 0x795404dc1d90>, queue=PriorityMultiQueue(queues={}), request_ctr=RequestCtr(requests=Counter(), replies=Counter(), sent=Counter(), received=Counter()))
 
 
 ## Messenger Interface
@@ -98,25 +96,18 @@ In this example you can see how we send and receive the most basic messages mess
 CHANNEL_A = 1
 CHANNEL_B = 2
 
-@dataclasses.dataclass
-class EchoProcess1:
-    messenger: coproc.PriorityMessenger
-    def __call__(self):
-        while True:
-            print(f'awaiting messages')
-            self.messenger.await_available()
-            print(f'some messages were found')
-            for data in self.messenger.receive_available(CHANNEL_A):
-                self.messenger.send_norequest(data, CHANNEL_A)
-            
-            for data in self.messenger.receive_available(CHANNEL_B):
-                self.messenger.send_norequest(data, CHANNEL_B)
-            
-            #data = self.messenger.receive_blocking()
-            #print(f'worker received: {data}')
-            #self.messenger.send_norequest(data)
+def echo_process_1(messenger: coproc.PriorityMessenger):
+    while True:
+        print(f'awaiting messages')
+        messenger.await_available()
+        print(f'some messages were found')
+        for data in messenger.receive_available(CHANNEL_A):
+            messenger.send_norequest(data, CHANNEL_A)
+        
+        for data in messenger.receive_available(CHANNEL_B):
+            messenger.send_norequest(data, CHANNEL_B)
 
-with coproc.WorkerResource(EchoProcess1) as w:
+with coproc.WorkerResource(echo_process_1) as w:
     print(f'{w.messenger.available()=}')
     print(w.messenger.send_norequest('hello', channel_id=CHANNEL_A))
     print(w.messenger.send_norequest('hi', channel_id=CHANNEL_B))
@@ -130,6 +121,8 @@ with coproc.WorkerResource(EchoProcess1) as w:
     awaiting messages
     some messages were found
     awaiting messages
+
+
     w.messenger.available()=0
     None
     None
@@ -144,14 +137,13 @@ In this example, I use `send_request()` and `send_reply()` to send and receive m
 
 
 ```python
-@dataclasses.dataclass
-class EchoProcess2(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            data = self.messenger.receive_blocking()
-            self.messenger.send_reply(data)
+def echo_process_2(messenger: coproc.PriorityMessenger):
+    while True:
+        data = messenger.receive_blocking()
+        messenger.send_reply(data)
+
             
-with coproc.WorkerResource(EchoProcess2) as w:
+with coproc.WorkerResource(echo_process_2) as w:
     print(f'{w.messenger.remaining()=}')
     print(f'{w.messenger.send_request("hello")=}')
     print(f'{w.messenger.remaining()=}')
@@ -185,14 +177,12 @@ Note that the default priority is `-inf`, so any message without a priority will
 
 
 ```python
-@dataclasses.dataclass
-class PrintProcess(coproc.BaseWorkerProcess):
-    def __call__(self):
-        while True:
-            for data in self.messenger.receive_available():
-                #self.messenger.send_reply(data)
-                print(data)
-            time.sleep(1)
+def print_process(messenger: coproc.PriorityMessenger):
+    while True:
+        for data in messenger.receive_available():
+            #self.messenger.send_reply(data)
+            print(data)
+        time.sleep(1)
 
 @dataclasses.dataclass
 class HighPriorityMessage:
@@ -204,7 +194,7 @@ class LowPriorityMessage:
     text: str
     priority: int = 1 # lower is more improtant
             
-with coproc.WorkerResource(PrintProcess, coproc.PriorityMessenger) as w:
+with coproc.WorkerResource(print_process, coproc.PriorityMessenger) as w:
     for i in range(3):
         w.messenger.send_norequest(LowPriorityMessage(f'low {i}'))
         w.messenger.send_norequest(HighPriorityMessage(f'high {i}'))
@@ -216,6 +206,8 @@ with coproc.WorkerResource(PrintProcess, coproc.PriorityMessenger) as w:
     HighPriorityMessage(text='high 1', priority=0)
     HighPriorityMessage(text='high 2', priority=0)
     LowPriorityMessage(text='low 0', priority=1)
+
+
     LowPriorityMessage(text='low 1', priority=1)
     LowPriorityMessage(text='low 2', priority=1)
 
@@ -238,8 +230,19 @@ class PrintProcess2(coproc.BaseWorkerProcess):
                 break # exits the process naturally
             for data in results:
                 print(data)
+
+def print_process_2(messenger: coproc.PriorityMessenger):
+    while True:
+        try:
+            message = messenger.await_available()
+            results = messenger.receive_available()
+        except coproc.ResourceRequestedClose as e:
+            messenger.send_error(ValueError('process was closed successfully'))
+            break # exits the process naturally
+        for data in results:
+            print(data)
             
-with coproc.WorkerResource(PrintProcess2) as w:
+with coproc.WorkerResource(print_process_2) as w:
     w.messenger.send_norequest('message 1')
     w.messenger.send_close_request()
     
@@ -252,12 +255,15 @@ with coproc.WorkerResource(PrintProcess2) as w:
 ```
 
     Traceback (most recent call last):
-      File "/tmp/ipykernel_1047367/3808203598.py", line 6, in __call__
-        message = self.messenger.await_available()
+      File "/tmp/ipykernel_1006618/3936782591.py", line 17, in print_process_2
+        message = messenger.await_available()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
       File "/DataDrive/projects/coproc/examples/../coproc/messenger/multimessenger.py", line 121, in await_available
         self._receive_and_handle()
       File "/DataDrive/projects/coproc/examples/../coproc/messenger/multimessenger.py", line 133, in _receive_and_handle
         self._handle_message(msg)
+
+
       File "/DataDrive/projects/coproc/examples/../coproc/messenger/multimessenger.py", line 147, in _handle_message
         raise ResourceRequestedClose(f'Resource requested that this process close.')
     coproc.messenger.exceptions.ResourceRequestedClose: Resource requested that this process close.

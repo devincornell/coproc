@@ -95,8 +95,8 @@ serve_mkdocs: mkdocs
 	mkdocs serve -a localhost:8882
 
 docs: mkdocs pdoc requirements
-	git add -f --all site/*
-	git add --all docs/*
+	# git add -f --all site/*
+	# git add --all docs/*
 	# git add requirements.txt
 
 mkdocs: example_notebooks
