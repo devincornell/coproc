@@ -49,12 +49,11 @@ push_all:
 	git commit -a -m '[auto_pushed_from_Makefile]'
 	git push
 
-reinstall:
-	pip uninstall -y doctable
-	pip install .
+reinstall: uninstall install
+	@echo "reinstalled"
 
 uninstall:
-	pip uninstall -y doctable
+	pip uninstall -y $(PACKAGE_NAME)
 
 install:
 	pip install .
