@@ -3,5 +3,7 @@ theme:
   name: material
   icon:
     repo: fontawesome/brands/git-alt 
+  features:
+    - navigation.expand
 repo_url: https://github.com/devincornell/coproc
 repo_name: devincornell/coproc
