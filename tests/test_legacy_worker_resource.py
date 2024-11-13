@@ -14,7 +14,7 @@ def echo_test(v: typing.Any) -> typing.Any:
     return v
 
 def UNUSED():
-    res = coproc.WorkerResource(
+    res = coproc.LegacyWorkerResource(
         worker_process_type = coproc.SimpleWorkerProcess,
     )
     res.start(worker_target=echo_test)
@@ -59,7 +59,7 @@ import time
 
 def test_workerresource_basic():
     
-    with coproc.WorkerResource(EchoProcess) as w:
+    with coproc.LegacyWorkerResource(EchoProcess) as w:
         v = 'Hello, world!'
         w.messenger.send_norequest(v)
         assert(v == w.messenger.receive_blocking())
