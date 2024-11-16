@@ -31,29 +31,64 @@ class MultiMessenger(typing.Generic[SendPayloadType, RecvPayloadType]):
     
     ############### Request/reply interface ###############
     def send_request_multiple(self, data: typing.Iterable[SendPayloadType], channel_id: ChannelID = None) -> None:
-        '''Blocking send of multiple data to pipe.'''
+        '''Blocking send of multiple data to pipe.
+        Args:
+            data: Iterable of data to send.
+            channel_id: ChannelID to send data to.
+        '''
         for d in data:
             self.send_request(d, channel_id=channel_id)
         
     def send_request(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
-        '''Send data that requires a reply.'''
+        '''Send data that requires a reply.
+        Args:
+            data: Data to send.
+            channel_id: ChannelID to send data to.
+        '''
         self.send_data_message(data, request_reply=True, is_reply=False, channel_id=channel_id)
         
     def send_reply(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
-        '''Send data that acts as a reply to a request.'''
+        '''Send data that acts as a reply to a request.
+        Args:
+            data: Data to send.
+            channel_id: ChannelID to send data to.
+        '''
         self.send_data_message(data, request_reply=False, is_reply=True, channel_id=channel_id)
     
     def send_norequest(self, data: SendPayloadType, channel_id: ChannelID = None) -> None:
-        '''Send data that does not requre a reply.'''
+        '''Send data that does not requre a reply.
+        Args:
+            data: Data to send.
+            channel_id: ChannelID to send data to.
+        '''
         self.send_data_message(data, request_reply=False, is_reply=False, channel_id=channel_id)
     
     ############### Sending various message types ###############
-    def send_data_message(self, payload: SendPayloadType, request_reply: bool, is_reply: bool, channel_id: ChannelID = None) -> None:
-        '''Send data message.'''
+    def send_data_message(self, 
+        payload: SendPayloadType, 
+        request_reply: bool, 
+        is_reply: bool, 
+        channel_id: ChannelID = None,
+        priority: float = float('inf'),
+    ) -> None:
+        '''Send data message.
+        Args:
+            payload: Data to send.
+            request_reply: Whether to request a reply or not.
+            is_reply: Whether this is a reply to a request.
+            channel_id: ChannelID to send data to.
+            priority: Priority of message.
+        '''
         if request_reply:
             self.request_ctr.sent_request(channel_id)
         self.request_ctr.sent_message(channel_id)
-        self._send_message(DataMessage(payload=payload, request_reply=request_reply, is_reply=is_reply, channel_id=channel_id))
+        self._send_message(DataMessage(
+            payload=payload, 
+            request_reply=request_reply, 
+            is_reply=is_reply, 
+            channel_id=channel_id,
+            priority=priority,
+        ))
         
     def send_close_request(self) -> None:
         '''Blocking send of close message to pipe.'''

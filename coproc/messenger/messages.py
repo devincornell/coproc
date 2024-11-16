@@ -67,14 +67,16 @@ class DataMessage(Message):
     request_reply: bool # whether to request a reply or not
     is_reply: bool # whether this is a reply to a request
     channel_id: ChannelID # set by the user in this case
+    priority: float = float('inf') # lower priority is more important
     mtype: MessageType = MessageType.DATA_PAYLOAD
     
-    @property
-    def priority(self) -> float:
-        try:
-            return self.payload.priority
-        except AttributeError:
-            return float('inf')
+    # NOTE: changed to a datacalass attribute.
+    #@property
+    #def priority(self) -> float:
+    #    try:
+    #        return self.payload.priority
+    #    except AttributeError:
+    #        return float('inf')
 
 
 
